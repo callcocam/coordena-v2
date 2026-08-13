@@ -313,6 +313,7 @@ trait HasTeams
             canRemoveMember: $this->hasPermissionForTeam($team, TeamPermission::RemoveMember->value),
             canCreateInvitation: $this->hasPermissionForTeam($team, TeamPermission::CreateInvitation->value),
             canCancelInvitation: $this->hasPermissionForTeam($team, TeamPermission::CancelInvitation->value),
+            canManageRoles: $this->hasPermissionForTeam($team, TeamPermission::ManageRoles->value),
         );
     }
 

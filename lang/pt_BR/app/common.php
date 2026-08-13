@@ -16,6 +16,7 @@ return [
         'delete' => 'Excluir',
         'edit' => 'Editar',
         'create' => 'Criar',
+        'apply' => 'Aplicar',
         'back' => 'Voltar',
         'close' => 'Fechar',
         'search' => 'Buscar',

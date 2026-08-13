@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Form, Head, router } from '@inertiajs/vue3';
-import { ChevronDown, Mail, UserPlus, X } from '@lucide/vue';
+import { Form, Head, Link } from '@inertiajs/vue3';
+import { Mail, Shield, UserPlus, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import CancelInvitationModal from '@/components/CancelInvitationModal.vue';
 import DeleteTeamModal from '@/components/DeleteTeamModal.vue';
@@ -8,15 +8,10 @@ import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import InviteMemberModal from '@/components/InviteMemberModal.vue';
 import RemoveMemberModal from '@/components/RemoveMemberModal.vue';
+import MemberCargosPicker from '@/components/teams/MemberCargosPicker.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -30,7 +25,7 @@ import { useT } from '@/composables/useT';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { edit, index, update } from '@/routes/teams';
-import { update as updateMember } from '@/routes/teams/members';
+import { index as cargosIndex } from '@/routes/teams/cargos';
 import type {
     RoleOption,
     Team,
@@ -89,13 +84,6 @@ const pageTitle = computed(() =>
 const memberCargoLabel = (member: TeamMember) =>
     member.cargos.map((cargo) => cargo.name).join(', ') ||
     t('app.teams.members.no_cargo');
-
-const updateMemberRole = (member: TeamMember, cargoKey: string) => {
-    router.visit(updateMember([props.team.slug, member.id]), {
-        data: { cargos: [cargoKey] },
-        preserveScroll: true,
-    });
-};
 
 const confirmRemoveMember = (member: TeamMember) => {
     memberToRemove.value = member;
@@ -170,13 +158,26 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
                     "
                 />
 
-                <Button
-                    v-if="permissions.canCreateInvitation"
-                    data-test="invite-member-button"
-                    @click="inviteDialogOpen = true"
-                >
-                    <UserPlus /> {{ t('app.teams.members.invite') }}
-                </Button>
+                <div class="flex items-center gap-2">
+                    <Button
+                        v-if="permissions.canManageRoles"
+                        as-child
+                        variant="outline"
+                        data-test="manage-cargos-link"
+                    >
+                        <Link :href="cargosIndex(team.slug)">
+                            <Shield /> {{ t('app.teams.cargos.manage_link') }}
+                        </Link>
+                    </Button>
+
+                    <Button
+                        v-if="permissions.canCreateInvitation"
+                        data-test="invite-member-button"
+                        @click="inviteDialogOpen = true"
+                    >
+                        <UserPlus /> {{ t('app.teams.members.invite') }}
+                    </Button>
+                </div>
             </div>
 
             <div class="space-y-3">
@@ -208,34 +209,12 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <DropdownMenu
-                            v-if="
-                                !member.isOwner && permissions.canUpdateMember
-                            "
-                        >
-                            <DropdownMenuTrigger as-child>
-                                <Button
-                                    data-test="member-role-trigger"
-                                    variant="outline"
-                                    size="sm"
-                                >
-                                    {{ memberCargoLabel(member) }}
-                                    <ChevronDown
-                                        class="ml-2 h-4 w-4 opacity-50"
-                                    />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem
-                                    v-for="role in availableRoles"
-                                    :key="role.key"
-                                    data-test="member-role-option"
-                                    @click="updateMemberRole(member, role.key)"
-                                >
-                                    {{ role.name }}
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <MemberCargosPicker
+                            v-if="!member.isOwner && permissions.canUpdateMember"
+                            :team="team"
+                            :member="member"
+                            :available-roles="availableRoles"
+                        />
                         <Badge v-else variant="secondary">
                             {{ memberCargoLabel(member) }}
                         </Badge>

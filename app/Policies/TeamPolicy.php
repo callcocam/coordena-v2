@@ -97,4 +97,12 @@ class TeamPolicy
     {
         return ! $team->is_personal && $user->hasTeamPermission($team, TeamPermission::DeleteTeam);
     }
+
+    /**
+     * Determine whether the user can manage the team's custom cargos.
+     */
+    public function manageRoles(User $user, Team $team): bool
+    {
+        return $user->hasTeamPermission($team, TeamPermission::ManageRoles);
+    }
 }

@@ -32,6 +32,9 @@ class PermissionCatalog
                 'invitation:create' => 'Criar convite',
                 'invitation:cancel' => 'Cancelar convite',
             ],
+            'role' => [
+                'role:manage' => 'Gerenciar cargos',
+            ],
             'congregation' => [
                 'congregation:view' => 'Ver dados da congregação',
                 'congregation:update' => 'Atualizar dados da congregação',

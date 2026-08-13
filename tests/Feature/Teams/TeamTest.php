@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\TeamRole;
+use App\Enums\DefaultCargo;
 use App\Models\Team;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -55,7 +55,8 @@ test('the team edit page can be rendered', function () {
     $user = User::factory()->create();
     $team = Team::factory()->create();
 
-    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $team->members()->attach($user, ['is_owner' => true]);
+    $user->assignCargo($team, DefaultCargo::Coordenador->value);
 
     $response = $this
         ->actingAs($user)
@@ -65,8 +66,8 @@ test('the team edit page can be rendered', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('teams/Edit')
-            ->where('members.0.role', TeamRole::Owner->value)
-            ->where('members.0.role_label', TeamRole::Owner->label()),
+            ->where('members.0.isOwner', true)
+            ->where('members.0.cargos.0.key', DefaultCargo::Coordenador->value),
         );
 });
 
@@ -74,7 +75,8 @@ test('teams can be updated by owners', function () {
     $user = User::factory()->create();
     $team = Team::factory()->create(['name' => 'Original Name']);
 
-    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $team->members()->attach($user, ['is_owner' => true]);
+    $user->assignCargo($team, DefaultCargo::Coordenador->value);
 
     $response = $this
         ->actingAs($user)
@@ -95,8 +97,11 @@ test('teams cannot be updated by members', function () {
     $member = User::factory()->create();
     $team = Team::factory()->create();
 
-    $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-    $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+    $team->members()->attach($owner, ['is_owner' => true]);
+    $owner->assignCargo($team, DefaultCargo::Coordenador->value);
+
+    $team->members()->attach($member, ['is_owner' => false]);
+    $member->assignCargo($team, DefaultCargo::Publicador->value);
 
     $response = $this
         ->actingAs($member)
@@ -111,7 +116,8 @@ test('teams can be deleted by owners', function () {
     $user = User::factory()->create();
     $team = Team::factory()->create();
 
-    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $team->members()->attach($user, ['is_owner' => true]);
+    $user->assignCargo($team, DefaultCargo::Coordenador->value);
 
     $response = $this
         ->actingAs($user)
@@ -130,7 +136,8 @@ test('team deletion requires name confirmation', function () {
     $user = User::factory()->create();
     $team = Team::factory()->create();
 
-    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $team->members()->attach($user, ['is_owner' => true]);
+    $user->assignCargo($team, DefaultCargo::Coordenador->value);
 
     $response = $this
         ->actingAs($user)
@@ -150,13 +157,16 @@ test('deleting current team switches to alphabetically first remaining team', fu
     $user = User::factory()->create(['name' => 'Mike']);
 
     $zuluTeam = Team::factory()->create(['name' => 'Zulu Team']);
-    $zuluTeam->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $zuluTeam->members()->attach($user, ['is_owner' => true]);
+    $user->assignCargo($zuluTeam, DefaultCargo::Coordenador->value);
 
     $alphaTeam = Team::factory()->create(['name' => 'Alpha Team']);
-    $alphaTeam->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $alphaTeam->members()->attach($user, ['is_owner' => true]);
+    $user->assignCargo($alphaTeam, DefaultCargo::Coordenador->value);
 
     $betaTeam = Team::factory()->create(['name' => 'Beta Team']);
-    $betaTeam->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $betaTeam->members()->attach($user, ['is_owner' => true]);
+    $user->assignCargo($betaTeam, DefaultCargo::Coordenador->value);
 
     $user->update(['current_team_id' => $zuluTeam->id]);
 
@@ -179,7 +189,8 @@ test('deleting current team falls back to personal team when alphabetically firs
     $user = User::factory()->create();
     $personalTeam = $user->personalTeam();
     $team = Team::factory()->create(['name' => 'Zulu Team']);
-    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $team->members()->attach($user, ['is_owner' => true]);
+    $user->assignCargo($team, DefaultCargo::Coordenador->value);
 
     $user->update(['current_team_id' => $team->id]);
 
@@ -202,7 +213,8 @@ test('deleting non current team leaves current team unchanged', function () {
     $user = User::factory()->create();
     $personalTeam = $user->personalTeam();
     $team = Team::factory()->create();
-    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $team->members()->attach($user, ['is_owner' => true]);
+    $user->assignCargo($team, DefaultCargo::Coordenador->value);
 
     $user->update(['current_team_id' => $personalTeam->id]);
 
@@ -226,8 +238,8 @@ test('members can leave non personal teams', function () {
     $member = User::factory()->create();
     $team = Team::factory()->create();
 
-    $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-    $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+    $team->members()->attach($owner, ['is_owner' => true]);
+    $team->members()->attach($member, ['is_owner' => false]);
 
     $response = $this
         ->actingAs($member)
@@ -244,14 +256,14 @@ test('leaving current team switches to alphabetically first remaining team', fun
     $member = User::factory()->create(['name' => 'Mike']);
 
     $zuluTeam = Team::factory()->create(['name' => 'Zulu Team']);
-    $zuluTeam->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-    $zuluTeam->members()->attach($member, ['role' => TeamRole::Member->value]);
+    $zuluTeam->members()->attach($owner, ['is_owner' => true]);
+    $zuluTeam->members()->attach($member, ['is_owner' => false]);
 
     $alphaTeam = Team::factory()->create(['name' => 'Alpha Team']);
-    $alphaTeam->members()->attach($member, ['role' => TeamRole::Member->value]);
+    $alphaTeam->members()->attach($member, ['is_owner' => false]);
 
     $betaTeam = Team::factory()->create(['name' => 'Beta Team']);
-    $betaTeam->members()->attach($member, ['role' => TeamRole::Member->value]);
+    $betaTeam->members()->attach($member, ['is_owner' => false]);
 
     $member->update(['current_team_id' => $zuluTeam->id]);
 
@@ -282,7 +294,7 @@ test('team owners cannot leave their team', function () {
     $owner = User::factory()->create();
     $team = Team::factory()->create();
 
-    $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+    $team->members()->attach($owner, ['is_owner' => true]);
 
     $response = $this
         ->actingAs($owner)
@@ -309,8 +321,9 @@ test('deleting team switches other affected users to their personal team', funct
     $member = User::factory()->create();
 
     $team = Team::factory()->create();
-    $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-    $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+    $team->members()->attach($owner, ['is_owner' => true]);
+    $owner->assignCargo($team, DefaultCargo::Coordenador->value);
+    $team->members()->attach($member, ['is_owner' => false]);
 
     $owner->update(['current_team_id' => $team->id]);
     $member->update(['current_team_id' => $team->id]);
@@ -350,8 +363,11 @@ test('teams cannot be deleted by non owners', function () {
     $member = User::factory()->create();
     $team = Team::factory()->create();
 
-    $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-    $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+    $team->members()->attach($owner, ['is_owner' => true]);
+    $owner->assignCargo($team, DefaultCargo::Coordenador->value);
+
+    $team->members()->attach($member, ['is_owner' => false]);
+    $member->assignCargo($team, DefaultCargo::Publicador->value);
 
     $response = $this
         ->actingAs($member)
@@ -366,7 +382,7 @@ test('users can switch teams', function () {
     $user = User::factory()->create();
     $team = Team::factory()->create();
 
-    $team->members()->attach($user, ['role' => TeamRole::Member->value]);
+    $team->members()->attach($user, ['is_owner' => false]);
 
     $response = $this
         ->actingAs($user)

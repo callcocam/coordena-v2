@@ -52,9 +52,23 @@ export type TeamPermissions = {
     canRemoveMember: boolean;
     canCreateInvitation: boolean;
     canCancelInvitation: boolean;
+    canManageRoles: boolean;
 };
 
 export type RoleOption = {
     key: string;
     name: string;
+};
+
+export type CargoDetail = {
+    id?: string;
+    key: string;
+    name: string;
+    isSuper?: boolean;
+    permissions: string[];
+};
+
+export type PermissionGroup = {
+    group: string;
+    permissions: { name: string; label: string }[];
 };
