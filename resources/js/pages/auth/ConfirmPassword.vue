@@ -47,7 +47,9 @@ const { t } = useT();
     >
         <div class="space-y-6">
             <div class="grid gap-2">
-                <Label htmlFor="password">{{ t('app.auth.fields.password') }}</Label>
+                <Label htmlFor="password">{{
+                    t('app.auth.fields.password')
+                }}</Label>
                 <PasswordInput
                     id="password"
                     name="password"

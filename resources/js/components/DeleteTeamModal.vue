@@ -58,7 +58,9 @@ const handleOpenChange = (nextOpen: boolean) => {
                 @success="handleOpenChange(false)"
             >
                 <DialogHeader>
-                    <DialogTitle>{{ t('app.teams.delete.confirm_title') }}</DialogTitle>
+                    <DialogTitle>{{
+                        t('app.teams.delete.confirm_title')
+                    }}</DialogTitle>
                     <DialogDescription>
                         {{ t('app.teams.delete.confirm_description') }}
                         <strong>"{{ props.team.name }}"</strong>.
@@ -77,7 +79,9 @@ const handleOpenChange = (nextOpen: boolean) => {
                             name="name"
                             data-test="delete-team-name"
                             v-model="confirmationName"
-                            :placeholder="t('app.teams.delete.name_placeholder')"
+                            :placeholder="
+                                t('app.teams.delete.name_placeholder')
+                            "
                             autocomplete="off"
                         />
                         <InputError :message="errors.name" />

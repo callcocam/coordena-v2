@@ -59,6 +59,19 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+    /*
+      Cores de marca do Coordena expostas como utilitários Tailwind
+      (bg-brand, text-brand-accent, ring-brand). Ver os tokens --brand*
+      em :root/.dark, que carregam a explicação e a calibração do dark.
+    */
+    --color-brand: var(--brand);
+    --color-brand-strong: var(--brand-strong);
+    --color-brand-ink: var(--brand-ink);
+    --color-brand-soft: var(--brand-soft);
+    --color-brand-soft-2: var(--brand-soft-2);
+    --color-brand-accent: var(--brand-accent);
+    --color-brand-accent-soft: var(--brand-accent-soft);
 }
 
 /*
@@ -124,6 +137,21 @@
     --sidebar-border: hsl(0 0% 91%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
     --sidebar: hsl(0 0% 98%);
+
+    /*
+      Tokens de marca do Coordena — usados apenas para IDENTIDADE (nav ativa,
+      CTAs, anéis de foco, painéis de marca). Deliberadamente NÃO substituem
+      --primary nem --accent do shadcn: controles de formulário seguem neutros.
+      O âmbar mora em --brand-accent (não em --accent) para não colidir com o
+      accent neutro do shadcn.
+    */
+    --brand: #0d9488;
+    --brand-strong: #0f766e;
+    --brand-ink: #042f2e;
+    --brand-soft: #f0fdfa;
+    --brand-soft-2: #ccfbf1;
+    --brand-accent: #f59e0b;
+    --brand-accent-soft: #fffbeb;
 }
 
 .dark {
@@ -160,6 +188,21 @@
     --sidebar-border: hsl(0 0% 15.9%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
     --sidebar: hsl(240 5.9% 10%);
+
+    /*
+      Teal do dark mode calibrado para não "brilhar" no fundo escuro: teal-400
+      (#2dd4bf, L≈51%) era claro e saturado demais e cansava a vista. Descido
+      para teal-500, que acalma os fills sólidos (logo, CTA, badges) e ainda
+      melhora o contraste do texto branco sobre o botão brand. O hover sobe um
+      degrau (teal-400) para dar o realce.
+    */
+    --brand: #14b8a6;
+    --brand-strong: #2dd4bf;
+    --brand-ink: #ccfbf1;
+    --brand-soft: rgba(20, 184, 166, 0.09);
+    --brand-soft-2: rgba(20, 184, 166, 0.18);
+    --brand-accent: #fbbf24;
+    --brand-accent-soft: rgba(251, 191, 36, 0.12);
 }
 
 @layer base {

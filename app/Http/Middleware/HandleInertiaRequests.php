@@ -46,6 +46,12 @@ class HandleInertiaRequests extends Middleware
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'currentTeam' => fn () => $user?->currentTeam ? $user->toUserTeam($user->currentTeam) : null,
             'teams' => fn () => $user?->toUserTeams(includeCurrent: true) ?? [],
+            'permissions' => fn (): array => $user?->currentTeam
+                ? $user->permissionNamesForTeam($user->currentTeam)->mapWithKeys(fn (string $name): array => [$name => true])->all()
+                : [],
+            'cargos' => fn (): array => $user?->currentTeam
+                ? $user->cargosForTeam($user->currentTeam)->map(fn ($cargo): array => ['key' => $cargo->key, 'name' => $cargo->name])->values()->all()
+                : [],
             'translations' => fn (): array => [
                 'app' => trans('app'),
                 'auth' => trans('auth'),

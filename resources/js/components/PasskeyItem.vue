@@ -53,10 +53,18 @@ const handleDelete = () => {
                     </span>
                 </div>
                 <p class="text-sm text-muted-foreground">
-                    {{ t('app.settings.passkeys.item.added', { time: passkey.created_at_diff }) }}
+                    {{
+                        t('app.settings.passkeys.item.added', {
+                            time: passkey.created_at_diff,
+                        })
+                    }}
                     <template v-if="passkey.last_used_at_diff">
                         <span class="mx-1 text-muted-foreground/50">/</span>
-                        {{ t('app.settings.passkeys.item.last_used', { time: passkey.last_used_at_diff }) }}
+                        {{
+                            t('app.settings.passkeys.item.last_used', {
+                                time: passkey.last_used_at_diff,
+                            })
+                        }}
                     </template>
                 </p>
             </div>
@@ -70,18 +78,28 @@ const handleDelete = () => {
                     class="text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                     <Trash2 class="h-4 w-4" />
-                    <span class="sr-only">{{ t('app.settings.passkeys.item.remove') }}</span>
+                    <span class="sr-only">{{
+                        t('app.settings.passkeys.item.remove')
+                    }}</span>
                 </Button>
             </DialogTrigger>
 
             <DialogContent>
-                <DialogTitle>{{ t('app.settings.passkeys.item.remove_title') }}</DialogTitle>
+                <DialogTitle>{{
+                    t('app.settings.passkeys.item.remove_title')
+                }}</DialogTitle>
                 <DialogDescription>
-                    {{ t('app.settings.passkeys.item.remove_description', { name: passkey.name }) }}
+                    {{
+                        t('app.settings.passkeys.item.remove_description', {
+                            name: passkey.name,
+                        })
+                    }}
                 </DialogDescription>
                 <DialogFooter class="gap-2">
                     <DialogClose as-child>
-                        <Button variant="secondary">{{ t('app.settings.passkeys.item.cancel') }}</Button>
+                        <Button variant="secondary">{{
+                            t('app.settings.passkeys.item.cancel')
+                        }}</Button>
                     </DialogClose>
                     <Button
                         variant="destructive"

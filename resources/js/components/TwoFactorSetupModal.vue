@@ -279,14 +279,20 @@ watch(
                                     @click="showVerificationStep = false"
                                     :disabled="processing"
                                 >
-                                    {{ t('app.settings.two_factor.setup.back') }}
+                                    {{
+                                        t('app.settings.two_factor.setup.back')
+                                    }}
                                 </Button>
                                 <Button
                                     type="submit"
                                     class="w-auto flex-1"
                                     :disabled="processing || code.length < 6"
                                 >
-                                    {{ t('app.settings.two_factor.setup.confirm') }}
+                                    {{
+                                        t(
+                                            'app.settings.two_factor.setup.confirm',
+                                        )
+                                    }}
                                 </Button>
                             </div>
                         </div>

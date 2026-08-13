@@ -1,0 +1,520 @@
+<script setup>
+import { router } from '@inertiajs/vue3';
+import { Plus, Trash2 } from '@lucide/vue';
+import { computed, reactive, ref, watch } from 'vue';
+import { toast } from 'vue-sonner';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { maxVar, parseTemplate, validateForm, varLabel } from './format';
+import WhatsAppPreview from './WhatsAppPreview.vue';
+
+const props = defineProps({
+    open: { type: Boolean, default: false },
+    mode: { type: String, default: 'create' }, // 'create' | 'edit'
+    template: { type: Object, default: null },
+    panelUrl: { type: String, required: true },
+});
+
+const emit = defineEmits(['close', 'saved']);
+
+const editId = ref(null);
+const localError = ref('');
+const serverError = ref('');
+const submitting = ref(false);
+
+// Match the shadcn Input chrome, but as a multi-line control (no ui/textarea).
+const textareaClass =
+    'placeholder:text-muted-foreground dark:bg-input/30 border-input min-h-[120px] w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50';
+
+const form = reactive({
+    name: '',
+    language: 'pt_BR',
+    category: 'UTILITY',
+    header: '',
+    headerExamples: [],
+    body: '',
+    bodyExamples: [],
+    footer: '',
+    buttons: [],
+});
+
+const isEdit = computed(() => props.mode === 'edit');
+
+// Bound so Vue doesn't try to interpolate the {{1}}/{{2}} tokens as mustaches.
+const bodyPlaceholder = 'Olá, {{1}}! Sua reunião é dia {{2}}. Até lá!';
+const insertVarLabel = '+ Inserir {{n}}';
+
+const submitLabel = computed(() =>
+    submitting.value
+        ? 'Enviando…'
+        : isEdit.value
+          ? 'Salvar (volta p/ análise)'
+          : 'Criar (envia p/ análise)',
+);
+
+function resetForm() {
+    form.name = '';
+    form.language = 'pt_BR';
+    form.category = 'UTILITY';
+    form.header = '';
+    form.headerExamples = [];
+    form.body = '';
+    form.bodyExamples = [];
+    form.footer = '';
+    form.buttons = [];
+    editId.value = null;
+    localError.value = '';
+    serverError.value = '';
+}
+
+function fillForm(m) {
+    form.name = m.name;
+    form.language = m.language;
+    form.category = m.category;
+    form.header = m.header && m.header.format === 'TEXT' ? m.header.text : '';
+    form.headerExamples =
+        m.header && m.header.examples ? [...m.header.examples] : [];
+    form.body = m.body ? m.body.text : '';
+    form.bodyExamples = m.body && m.body.examples ? [...m.body.examples] : [];
+    form.footer = m.footer ? m.footer.text : '';
+    form.buttons = m.buttons.map((b) => ({ ...b }));
+}
+
+// Keep the per-variable example inputs in sync with the {{n}} count.
+watch(
+    () => form.body,
+    () => syncExamples('body'),
+);
+watch(
+    () => form.header,
+    () => syncExamples('header'),
+);
+
+function syncExamples(which) {
+    const source = which === 'body' ? form.body : form.header;
+    const key = which === 'body' ? 'bodyExamples' : 'headerExamples';
+    const n = maxVar(source);
+    const next = [];
+
+    for (let i = 0; i < n; i++) {
+next.push(form[key][i] ?? '');
+}
+
+    form[key] = next;
+}
+
+function insertVar() {
+    const next = maxVar(form.body) + 1;
+    form.body = `${form.body}{{${next}}}`;
+}
+
+function addButton(type = 'QUICK_REPLY') {
+    form.buttons.push({ type, text: '', url: '', phone_number: '' });
+}
+
+function removeButton(i) {
+    form.buttons.splice(i, 1);
+}
+
+const previewButtons = computed(() => form.buttons);
+
+watch(
+    () => props.open,
+    (isOpen) => {
+        if (!isOpen) {
+return;
+}
+
+        resetForm();
+
+        if (isEdit.value && props.template) {
+            const m = parseTemplate(props.template);
+            editId.value = m.id;
+            fillForm(m);
+
+            if (m.header && m.header.format !== 'TEXT') {
+                toast.warning(
+                    `Cabeçalho de mídia (${m.header.format}) não é editável por aqui e será removido se salvar.`,
+                );
+            }
+        }
+    },
+);
+
+function submit() {
+    const err = validateForm(form);
+    localError.value = err || '';
+
+    if (err) {
+return;
+}
+
+    serverError.value = '';
+    submitting.value = true;
+
+    const payload = {
+        name: form.name.trim(),
+        language: form.language,
+        category: form.category,
+        header: form.header.trim(),
+        headerExamples: form.headerExamples,
+        body: form.body,
+        bodyExamples: form.bodyExamples,
+        footer: form.footer.trim(),
+        buttons: form.buttons
+            .map((b) => {
+                const out = { type: b.type, text: (b.text || '').trim() };
+
+                if (b.type === 'URL') {
+out.url = (b.url || '').trim();
+} else if (b.type === 'PHONE_NUMBER') {
+out.phone_number = (b.phone_number || '').trim();
+}
+
+                return out;
+            })
+            .filter((b) => b.text !== ''),
+    };
+
+    const url = editId.value
+        ? `${props.panelUrl}/${encodeURIComponent(editId.value)}/edit`
+        : props.panelUrl;
+
+    router.post(url, payload, {
+        preserveScroll: true,
+        // Success toast fires globally from the server's flash.toast.
+        onSuccess: () => emit('saved'),
+        onError: (errors) => {
+            serverError.value =
+                errors.form ||
+                errors.meta ||
+                'Não foi possível salvar o template.';
+        },
+        onFinish: () => {
+            submitting.value = false;
+        },
+    });
+}
+
+function onOpenChange(value) {
+    if (!value) {
+emit('close');
+}
+}
+</script>
+
+<template>
+    <Dialog :open="open" @update:open="onOpenChange">
+        <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+            <DialogHeader>
+                <DialogTitle>{{
+                    isEdit ? 'Editar template' : 'Novo template'
+                }}</DialogTitle>
+                <DialogDescription>
+                    O template é enviado para análise da Meta antes de poder ser
+                    usado.
+                </DialogDescription>
+            </DialogHeader>
+
+            <div
+                v-if="isEdit"
+                class="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400"
+            >
+                ⚠️ Editar reseta o template para <b>PENDING</b> (nova análise).
+                Nome e idioma não podem mudar.
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-[1fr_300px]">
+                <div class="grid gap-4">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="grid gap-1.5">
+                            <Label>Nome</Label>
+                            <Input
+                                v-model="form.name"
+                                type="text"
+                                placeholder="coordena_lembrete"
+                                autocomplete="off"
+                                :disabled="isEdit"
+                            />
+                            <span class="text-xs text-muted-foreground"
+                                >a–z, 0–9 e _ (imutável após criar)</span
+                            >
+                        </div>
+                        <div class="grid gap-1.5">
+                            <Label>Idioma</Label>
+                            <Select v-model="form.language" :disabled="isEdit">
+                                <SelectTrigger class="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="pt_BR"
+                                        >pt_BR — Português (BR)</SelectItem
+                                    >
+                                    <SelectItem value="pt_PT"
+                                        >pt_PT — Português (PT)</SelectItem
+                                    >
+                                    <SelectItem value="en_US"
+                                        >en_US — Inglês (US)</SelectItem
+                                    >
+                                    <SelectItem value="es_ES"
+                                        >es_ES — Espanhol</SelectItem
+                                    >
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div class="grid gap-1.5">
+                            <Label>Categoria</Label>
+                            <Select v-model="form.category">
+                                <SelectTrigger class="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="UTILITY"
+                                        >UTILITY — transacional</SelectItem
+                                    >
+                                    <SelectItem value="MARKETING"
+                                        >MARKETING — promocional</SelectItem
+                                    >
+                                    <SelectItem value="AUTHENTICATION"
+                                        >AUTHENTICATION — códigos</SelectItem
+                                    >
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div class="grid gap-1.5">
+                            <Label
+                                >Cabeçalho
+                                <span class="text-xs text-muted-foreground"
+                                    >(opcional)</span
+                                ></Label
+                            >
+                            <Input
+                                v-model="form.header"
+                                type="text"
+                                placeholder="texto do cabeçalho"
+                                autocomplete="off"
+                            />
+                        </div>
+                    </div>
+
+                    <div v-if="form.headerExamples.length" class="grid gap-1.5">
+                        <Label>Exemplo do cabeçalho</Label>
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            <div
+                                v-for="(_, i) in form.headerExamples"
+                                :key="i"
+                                class="flex items-center gap-2"
+                            >
+                                <span
+                                    class="w-10 shrink-0 text-xs text-muted-foreground"
+                                    >{{ varLabel(i) }}</span
+                                >
+                                <Input
+                                    v-model="form.headerExamples[i]"
+                                    type="text"
+                                    placeholder="exemplo"
+                                    autocomplete="off"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-1.5">
+                        <Label>Corpo</Label>
+                        <textarea
+                            v-model="form.body"
+                            :placeholder="bodyPlaceholder"
+                            :class="textareaClass"
+                        />
+                        <div class="flex flex-wrap items-center gap-2">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                @click="insertVar"
+                            >
+                                {{ insertVarLabel }}
+                            </Button>
+                            <span class="text-xs text-muted-foreground"
+                                >Não comece nem termine o corpo com uma
+                                variável.</span
+                            >
+                        </div>
+                    </div>
+
+                    <div v-if="form.bodyExamples.length" class="grid gap-1.5">
+                        <Label
+                            >Exemplos das variáveis
+                            <span class="text-xs text-muted-foreground"
+                                >(1 por variável)</span
+                            ></Label
+                        >
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            <div
+                                v-for="(_, i) in form.bodyExamples"
+                                :key="i"
+                                class="flex items-center gap-2"
+                            >
+                                <span
+                                    class="w-10 shrink-0 text-xs text-muted-foreground"
+                                    >{{ varLabel(i) }}</span
+                                >
+                                <Input
+                                    v-model="form.bodyExamples[i]"
+                                    type="text"
+                                    placeholder="exemplo"
+                                    autocomplete="off"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-1.5">
+                        <Label
+                            >Rodapé
+                            <span class="text-xs text-muted-foreground"
+                                >(opcional, sem variáveis)</span
+                            ></Label
+                        >
+                        <Input
+                            v-model="form.footer"
+                            type="text"
+                            placeholder="Coordena"
+                            autocomplete="off"
+                        />
+                    </div>
+
+                    <div class="grid gap-1.5">
+                        <Label
+                            >Botões
+                            <span class="text-xs text-muted-foreground"
+                                >(opcional)</span
+                            ></Label
+                        >
+                        <div class="space-y-2">
+                            <div
+                                v-for="(b, i) in form.buttons"
+                                :key="i"
+                                class="flex flex-wrap items-center gap-2"
+                            >
+                                <Select v-model="b.type">
+                                    <SelectTrigger class="w-36 shrink-0">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="QUICK_REPLY"
+                                            >Resposta</SelectItem
+                                        >
+                                        <SelectItem value="URL">URL</SelectItem>
+                                        <SelectItem value="PHONE_NUMBER"
+                                            >Telefone</SelectItem
+                                        >
+                                    </SelectContent>
+                                </Select>
+                                <Input
+                                    v-model="b.text"
+                                    type="text"
+                                    placeholder="Texto do botão"
+                                    class="flex-1"
+                                />
+                                <Input
+                                    v-if="b.type === 'URL'"
+                                    v-model="b.url"
+                                    type="text"
+                                    placeholder="https://exemplo.com"
+                                    class="flex-1"
+                                />
+                                <Input
+                                    v-else-if="b.type === 'PHONE_NUMBER'"
+                                    v-model="b.phone_number"
+                                    type="text"
+                                    placeholder="+5548999999999"
+                                    class="flex-1"
+                                />
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    class="text-destructive"
+                                    title="Remover botão"
+                                    @click="removeButton(i)"
+                                >
+                                    <Trash2 />
+                                </Button>
+                            </div>
+                        </div>
+                        <div class="mt-1 flex flex-wrap gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                @click="addButton('QUICK_REPLY')"
+                            >
+                                <Plus /> Resposta rápida
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                @click="addButton('URL')"
+                            >
+                                <Plus /> URL
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                @click="addButton('PHONE_NUMBER')"
+                            >
+                                <Plus /> Telefone
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <Label>Pré-visualização</Label>
+                    <WhatsAppPreview
+                        :header="form.header"
+                        :body="form.body"
+                        :footer="form.footer"
+                        :buttons="previewButtons"
+                    />
+                    <p class="text-xs text-muted-foreground">
+                        A validação final é da Meta. A categoria pode ser
+                        reclassificada por conteúdo.
+                    </p>
+                </div>
+            </div>
+
+            <DialogFooter class="items-center gap-2 sm:justify-between">
+                <span class="text-sm text-destructive">{{
+                    localError || serverError
+                }}</span>
+                <div class="flex gap-2">
+                    <Button variant="outline" @click="emit('close')"
+                        >Cancelar</Button
+                    >
+                    <Button :disabled="submitting" @click="submit">{{
+                        submitLabel
+                    }}</Button>
+                </div>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+</template>

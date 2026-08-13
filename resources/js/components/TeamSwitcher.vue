@@ -122,7 +122,9 @@ onUnmounted(() => {
                                 : 'truncate font-semibold'
                         "
                     >
-                        {{ currentTeam?.name ?? t('app.teams.switcher.select') }}
+                        {{
+                            currentTeam?.name ?? t('app.teams.switcher.select')
+                        }}
                     </span>
                 </div>
                 <ChevronsUpDown
@@ -165,7 +167,9 @@ onUnmounted(() => {
                     @select.prevent
                 >
                     <Plus :class="plusIconClass" />
-                    <span class="text-muted-foreground">{{ t('app.teams.switcher.new_team') }}</span>
+                    <span class="text-muted-foreground">{{
+                        t('app.teams.switcher.new_team')
+                    }}</span>
                 </DropdownMenuItem>
             </CreateTeamModal>
         </DropdownMenuContent>

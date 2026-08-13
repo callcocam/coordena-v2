@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'whatsapp_cloud' => [
+        // Operadores autorizados a gerenciar templates na WABA compartilhada
+        // (painel /whatsapp/cloud/templates). E-mails separados por vírgula;
+        // vazio = ninguém (o gate manage-whatsapp-templates nega por padrão).
+        'panel_emails' => env('WHATSAPP_CLOUD_PANEL_EMAILS'),
+    ],
+
 ];

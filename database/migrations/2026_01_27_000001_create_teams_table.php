@@ -24,7 +24,7 @@ return new class extends Migration
             $table->id();
             $table->foreignUlid('team_id')->constrained()->cascadeOnDelete();
             $table->foreignUlid('user_id')->constrained()->cascadeOnDelete();
-            $table->string('role');
+            $table->boolean('is_owner')->default(false);
             $table->timestamps();
 
             $table->unique(['team_id', 'user_id']);
@@ -35,7 +35,7 @@ return new class extends Migration
             $table->string('code', 64)->unique();
             $table->foreignUlid('team_id')->constrained()->cascadeOnDelete();
             $table->string('email');
-            $table->string('role');
+            $table->string('role_key')->nullable();
             $table->foreignUlid('invited_by')->constrained('users')->cascadeOnDelete();
             $table->timestamp('expires_at')->nullable();
             $table->timestamp('accepted_at')->nullable();

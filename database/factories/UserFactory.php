@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\TeamRole;
+use App\Enums\DefaultCargo;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -43,14 +43,16 @@ class UserFactory extends Factory
      */
     public function configure(): static
     {
-        return $this->afterCreating(function ($user) {
+        return $this->afterCreating(function (User $user) {
             $team = Team::factory()->personal()->create([
                 'name' => $user->name."'s Team",
             ]);
 
             $team->members()->attach($user, [
-                'role' => TeamRole::Owner->value,
+                'is_owner' => true,
             ]);
+
+            $user->assignCargo($team, DefaultCargo::Coordenador->value);
 
             $user->switchTeam($team);
         });

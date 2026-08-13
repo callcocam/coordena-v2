@@ -47,7 +47,9 @@ const cancelInvitation = () => {
     <Dialog :open="props.open" @update:open="emit('update:open', $event)">
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>{{ t('app.teams.invitations.cancel_title') }}</DialogTitle>
+                <DialogTitle>{{
+                    t('app.teams.invitations.cancel_title')
+                }}</DialogTitle>
                 <DialogDescription>
                     {{ t('app.teams.invitations.cancel_confirm_prefix') }}
                     <strong>{{ props.invitation?.email }}</strong

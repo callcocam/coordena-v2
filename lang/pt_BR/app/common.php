@@ -30,4 +30,10 @@ return [
         'show' => 'Mostrar senha',
         'hide' => 'Ocultar senha',
     ],
+    'theme_toggle' => 'Alternar tema',
+    'scroll_to_top' => 'Voltar ao topo',
+    'load_more' => [
+        'label' => 'Carregar mais',
+        'count' => 'Carregar mais (:count restantes)',
+    ],
 ];

@@ -1,19 +1,18 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
+// Marca Coordena para o shell autenticado. O glifo é auto-contido (quadrado
+// teal + nós + centro âmbar), então basta dimensioná-lo — sem fundo colorido em
+// volta. A estrutura preserva o colapso do sidebar (glifo à esquerda, wordmark
+// clipado no modo ícone).
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
-
-const name = usePage().props.name;
 </script>
 
 <template>
-    <div
-        class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
-    >
-        <AppLogoIcon class="size-5 fill-current text-white dark:text-black" />
-    </div>
+    <AppLogoIcon class="size-8 rounded-md shadow-sm" />
     <div class="ml-1 grid flex-1 text-left text-sm">
-        <span class="mb-0.5 truncate leading-tight font-semibold">{{
-            name
-        }}</span>
+        <span
+            class="mb-0.5 truncate leading-tight font-extrabold tracking-tight"
+        >
+            Coordena
+        </span>
     </div>
 </template>

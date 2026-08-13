@@ -57,7 +57,9 @@ const inputEmail = ref(props.email);
             </div>
 
             <div class="grid gap-2">
-                <Label for="password">{{ t('app.auth.fields.password') }}</Label>
+                <Label for="password">{{
+                    t('app.auth.fields.password')
+                }}</Label>
                 <PasswordInput
                     id="password"
                     name="password"
@@ -79,7 +81,9 @@ const inputEmail = ref(props.email);
                     name="password_confirmation"
                     autocomplete="new-password"
                     class="mt-1 block w-full"
-                    :placeholder="t('app.auth.fields.password_confirmation_placeholder')"
+                    :placeholder="
+                        t('app.auth.fields.password_confirmation_placeholder')
+                    "
                     :passwordrules="passwordRules"
                 />
                 <InputError :message="errors.password_confirmation" />

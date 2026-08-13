@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Teams;
 
-use App\Enums\TeamRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Teams\UpdateTeamMemberRequest;
 use App\Models\Team;
@@ -14,18 +13,17 @@ use Inertia\Inertia;
 class TeamMemberController extends Controller
 {
     /**
-     * Update the specified team member's role.
+     * Update the specified team member's cargos.
      */
     public function update(UpdateTeamMemberRequest $request, Team $team, User $user): RedirectResponse
     {
         Gate::authorize('updateMember', $team);
 
-        $newRole = TeamRole::from($request->validated('role'));
-
         $team->memberships()
             ->where('user_id', $user->id)
-            ->firstOrFail()
-            ->update(['role' => $newRole]);
+            ->firstOrFail();
+
+        $user->syncCargos($team, $request->validated('cargos'));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Member role updated.')]);
 
@@ -44,6 +42,8 @@ class TeamMemberController extends Controller
         $team->memberships()
             ->where('user_id', $user->id)
             ->delete();
+
+        $user->syncCargos($team, []);
 
         if ($user->isCurrentTeam($team)) {
             $user->switchTeam($user->personalTeam());

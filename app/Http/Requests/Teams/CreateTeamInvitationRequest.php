@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Teams;
 
-use App\Enums\TeamRole;
+use App\Models\Role;
 use App\Models\Team;
 use App\Rules\UniqueTeamInvitation;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -22,9 +22,14 @@ class CreateTeamInvitationRequest extends FormRequest
 
         abort_if(! $team instanceof Team, 404);
 
+        $assignableKeys = Role::query()
+            ->assignableForTeam($team)
+            ->pluck('key')
+            ->all();
+
         return [
             'email' => ['required', 'string', 'email', 'max:255', new UniqueTeamInvitation($team)],
-            'role' => ['required', 'string', Rule::enum(TeamRole::class)],
+            'role_key' => ['required', 'string', Rule::in($assignableKeys)],
         ];
     }
 }

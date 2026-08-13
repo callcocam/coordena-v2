@@ -38,14 +38,14 @@ const emit = defineEmits<{
 
 const { t } = useT();
 
-const inviteRole = ref('member');
+const inviteRole = ref('publicador');
 const formKey = ref(0);
 
 function handleOpenChange(value: boolean) {
     emit('update:open', value);
 
     if (!value) {
-        inviteRole.value = 'member';
+        inviteRole.value = 'publicador';
         formKey.value++;
     }
 }
@@ -70,39 +70,49 @@ function handleOpenChange(value: boolean) {
 
                 <div class="grid gap-4">
                     <div class="grid gap-2">
-                        <Label for="email">{{ t('app.teams.invite.email_label') }}</Label>
+                        <Label for="email">{{
+                            t('app.teams.invite.email_label')
+                        }}</Label>
                         <Input
                             id="email"
                             name="email"
                             data-test="invite-email"
                             type="email"
-                            :placeholder="t('app.teams.invite.email_placeholder')"
+                            :placeholder="
+                                t('app.teams.invite.email_placeholder')
+                            "
                             required
                         />
                         <InputError :message="errors.email" />
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="role">{{ t('app.teams.invite.role_label') }}</Label>
+                        <Label for="role_key">{{
+                            t('app.teams.invite.role_label')
+                        }}</Label>
                         <Select
                             v-model="inviteRole"
-                            name="role"
+                            name="role_key"
                             data-test="invite-role"
                         >
                             <SelectTrigger class="w-full">
-                                <SelectValue :placeholder="t('app.teams.invite.role_placeholder')" />
+                                <SelectValue
+                                    :placeholder="
+                                        t('app.teams.invite.role_placeholder')
+                                    "
+                                />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem
                                     v-for="role in props.availableRoles"
-                                    :key="role.value"
-                                    :value="role.value"
+                                    :key="role.key"
+                                    :value="role.key"
                                 >
-                                    {{ role.label }}
+                                    {{ role.name }}
                                 </SelectItem>
                             </SelectContent>
                         </Select>
-                        <InputError :message="errors.role" />
+                        <InputError :message="errors.role_key" />
                     </div>
                 </div>
 

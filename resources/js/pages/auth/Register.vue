@@ -78,7 +78,9 @@ const { t } = useT();
             </div>
 
             <div class="grid gap-2">
-                <Label for="password">{{ t('app.auth.fields.password') }}</Label>
+                <Label for="password">{{
+                    t('app.auth.fields.password')
+                }}</Label>
                 <PasswordInput
                     id="password"
                     required
@@ -101,7 +103,9 @@ const { t } = useT();
                     :tabindex="4"
                     autocomplete="new-password"
                     name="password_confirmation"
-                    :placeholder="t('app.auth.fields.password_confirmation_placeholder')"
+                    :placeholder="
+                        t('app.auth.fields.password_confirmation_placeholder')
+                    "
                     :passwordrules="passwordRules"
                 />
                 <InputError :message="errors.password_confirmation" />

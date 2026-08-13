@@ -1,0 +1,183 @@
+<script setup>
+import { router } from '@inertiajs/vue3';
+import { Send } from '@lucide/vue';
+import { computed, reactive, ref, watch } from 'vue';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { maxVar, parseTemplate, varLabel } from './format';
+import StatusBadge from './StatusBadge.vue';
+
+const props = defineProps({
+    open: { type: Boolean, default: false },
+    template: { type: Object, default: null },
+    panelUrl: { type: String, required: true },
+});
+
+const emit = defineEmits(['close', 'sent']);
+
+const localError = ref('');
+const serverError = ref('');
+const submitting = ref(false);
+
+const state = reactive({
+    name: '',
+    language: 'pt_BR',
+    to: '',
+    params: [],
+    status: '',
+});
+
+const model = computed(() =>
+    props.template ? parseTemplate(props.template) : null,
+);
+
+// Prime the form each time the modal opens with a template.
+watch(
+    () => props.open,
+    (isOpen) => {
+        if (!isOpen || !props.template) {
+return;
+}
+
+        const m = parseTemplate(props.template);
+        state.name = m.name;
+        state.language = m.language;
+        state.status = m.status;
+        state.to = '';
+        localError.value = '';
+        serverError.value = '';
+        const n = m.body ? maxVar(m.body.text) : 0;
+        state.params = [];
+
+        for (let i = 0; i < n; i++) {
+            state.params.push((m.body.examples && m.body.examples[i]) || '');
+        }
+    },
+);
+
+function submit() {
+    const to = String(state.to).replace(/\D+/g, '');
+
+    if (!/^\d{8,15}$/.test(to)) {
+        localError.value = 'Número inválido (só dígitos, com DDI e DDD).';
+
+        return;
+    }
+
+    localError.value = '';
+    serverError.value = '';
+    submitting.value = true;
+
+    router.post(
+        `${props.panelUrl}/send`,
+        {
+            name: state.name,
+            to,
+            params: state.params,
+            language: state.language.trim() || 'pt_BR',
+        },
+        {
+            preserveScroll: true,
+            // Success toast fires globally from the server's flash.toast.
+            onSuccess: () => emit('sent'),
+            onError: (errors) => {
+                serverError.value =
+                    errors.form || errors.meta || 'Falha ao enviar a mensagem.';
+            },
+            onFinish: () => {
+                submitting.value = false;
+            },
+        },
+    );
+}
+
+function onOpenChange(value) {
+    if (!value) {
+emit('close');
+}
+}
+</script>
+
+<template>
+    <Dialog :open="open" @update:open="onOpenChange">
+        <DialogContent v-if="model" class="sm:max-w-lg">
+            <DialogHeader>
+                <DialogTitle>Enviar teste</DialogTitle>
+                <DialogDescription class="flex flex-wrap items-center gap-1.5">
+                    Template <b class="font-medium">{{ model.name }}</b> ·
+                    {{ model.language }} ·
+                    <StatusBadge :status="model.status" />
+                </DialogDescription>
+            </DialogHeader>
+
+            <div class="grid gap-4">
+                <div class="grid gap-1.5">
+                    <Label>Número de destino</Label>
+                    <Input
+                        v-model="state.to"
+                        type="text"
+                        placeholder="5548999999999"
+                        autocomplete="off"
+                        inputmode="numeric"
+                    />
+                    <span class="text-xs text-muted-foreground">
+                        Só dígitos, com DDI (55) e DDD.
+                    </span>
+                </div>
+                <div class="grid gap-1.5">
+                    <Label>Idioma</Label>
+                    <Input
+                        v-model="state.language"
+                        type="text"
+                        autocomplete="off"
+                    />
+                </div>
+                <div v-if="state.params.length" class="grid gap-1.5">
+                    <Label>Variáveis do corpo</Label>
+                    <div class="grid gap-2 sm:grid-cols-2">
+                        <div
+                            v-for="(_, i) in state.params"
+                            :key="i"
+                            class="flex items-center gap-2"
+                        >
+                            <span
+                                class="w-10 shrink-0 text-xs text-muted-foreground"
+                            >
+                                {{ varLabel(i) }}
+                            </span>
+                            <Input
+                                v-model="state.params[i]"
+                                type="text"
+                                autocomplete="off"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <DialogFooter class="items-center gap-2 sm:justify-between">
+                <span class="text-sm text-destructive">{{
+                    localError || serverError
+                }}</span>
+                <div class="flex gap-2">
+                    <Button variant="outline" @click="emit('close')"
+                        >Cancelar</Button
+                    >
+                    <Button :disabled="submitting" @click="submit">
+                        <Send />
+                        Enviar
+                    </Button>
+                </div>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+</template>

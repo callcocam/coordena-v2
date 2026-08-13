@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
 use Closure;
@@ -16,13 +15,13 @@ class EnsureTeamMembership
      *
      * @param  Closure(Request): (Response)  $next
      */
-    public function handle(Request $request, Closure $next, ?string $minimumRole = null): Response
+    public function handle(Request $request, Closure $next, ?string $permission = null): Response
     {
         [$user, $team] = [$request->user(), $this->team($request)];
 
         abort_if(! $user || ! $team || ! $user->belongsToTeam($team), 403);
 
-        $this->ensureTeamMemberHasRequiredRole($user, $team, $minimumRole);
+        $this->ensureTeamMemberHasPermission($user, $team, $permission);
 
         if ($request->route('current_team') && ! $user->isCurrentTeam($team)) {
             $user->switchTeam($team);
@@ -32,24 +31,15 @@ class EnsureTeamMembership
     }
 
     /**
-     * Ensure the given user has at least the given role, if applicable.
+     * Ensure the given user holds the required permission, if one is set.
      */
-    protected function ensureTeamMemberHasRequiredRole(User $user, Team $team, ?string $minimumRole): void
+    protected function ensureTeamMemberHasPermission(User $user, Team $team, ?string $permission): void
     {
-        if ($minimumRole === null) {
+        if ($permission === null) {
             return;
         }
 
-        $role = $user->teamRole($team);
-
-        $requiredRole = TeamRole::tryFrom($minimumRole);
-
-        abort_if(
-            $requiredRole === null ||
-            $role === null ||
-            ! $role->isAtLeast($requiredRole),
-            403,
-        );
+        abort_unless($user->hasPermissionForTeam($team, $permission), 403);
     }
 
     /**

@@ -86,9 +86,13 @@ const pageTitle = computed(() =>
         : t('app.teams.edit.title_view', { name: props.team.name }),
 );
 
-const updateMemberRole = (member: TeamMember, newRole: string) => {
+const memberCargoLabel = (member: TeamMember) =>
+    member.cargos.map((cargo) => cargo.name).join(', ') ||
+    t('app.teams.members.no_cargo');
+
+const updateMemberRole = (member: TeamMember, cargoKey: string) => {
     router.visit(updateMember([props.team.slug, member.id]), {
-        data: { role: newRole },
+        data: { cargos: [cargoKey] },
         preserveScroll: true,
     });
 };
@@ -124,7 +128,9 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
                 v-slot="{ errors, processing }"
             >
                 <div class="grid gap-2">
-                    <Label for="name">{{ t('app.teams.edit.name_label') }}</Label>
+                    <Label for="name">{{
+                        t('app.teams.edit.name_label')
+                    }}</Label>
                     <Input
                         id="name"
                         name="name"
@@ -204,8 +210,7 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
                     <div class="flex items-center gap-2">
                         <DropdownMenu
                             v-if="
-                                member.role !== 'owner' &&
-                                permissions.canUpdateMember
+                                !member.isOwner && permissions.canUpdateMember
                             "
                         >
                             <DropdownMenuTrigger as-child>
@@ -214,7 +219,7 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
                                     variant="outline"
                                     size="sm"
                                 >
-                                    {{ member.role_label }}
+                                    {{ memberCargoLabel(member) }}
                                     <ChevronDown
                                         class="ml-2 h-4 w-4 opacity-50"
                                     />
@@ -223,24 +228,21 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
                             <DropdownMenuContent>
                                 <DropdownMenuItem
                                     v-for="role in availableRoles"
-                                    :key="role.value"
+                                    :key="role.key"
                                     data-test="member-role-option"
-                                    @click="
-                                        updateMemberRole(member, role.value)
-                                    "
+                                    @click="updateMemberRole(member, role.key)"
                                 >
-                                    {{ role.label }}
+                                    {{ role.name }}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                         <Badge v-else variant="secondary">
-                            {{ member.role_label }}
+                            {{ memberCargoLabel(member) }}
                         </Badge>
 
                         <TooltipProvider
                             v-if="
-                                member.role !== 'owner' &&
-                                permissions.canRemoveMember
+                                !member.isOwner && permissions.canRemoveMember
                             "
                         >
                             <Tooltip>
@@ -255,7 +257,13 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>{{ t('app.teams.members.remove_tooltip') }}</p>
+                                    <p>
+                                        {{
+                                            t(
+                                                'app.teams.members.remove_tooltip',
+                                            )
+                                        }}
+                                    </p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -308,7 +316,13 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>{{ t('app.teams.invitations.cancel_tooltip') }}</p>
+                                <p>
+                                    {{
+                                        t(
+                                            'app.teams.invitations.cancel_tooltip',
+                                        )
+                                    }}
+                                </p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -332,7 +346,9 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
                 <div
                     class="relative space-y-0.5 text-red-600 dark:text-red-100"
                 >
-                    <p class="font-medium">{{ t('app.teams.delete.warning') }}</p>
+                    <p class="font-medium">
+                        {{ t('app.teams.delete.warning') }}
+                    </p>
                     <p class="text-sm">
                         {{ t('app.teams.delete.warning_text') }}
                     </p>

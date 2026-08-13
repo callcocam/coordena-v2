@@ -9,6 +9,28 @@ declare(strict_types=1);
 */
 
 return [
+    'common' => [
+        'back_home' => 'Voltar ao início',
+        'theme_toggle' => 'Alternar tema',
+        'brand_title' => 'Coordene sua equipe sem planilhas.',
+        'brand_tagline' => 'Monte a escala, avise pelo WhatsApp e acompanhe as confirmações — tudo em um só lugar.',
+        'panel' => [
+            'label' => 'Escala de domingo',
+            'meta' => 'Confirmações em tempo real',
+            'confirming' => 'Confirmando…',
+            'confirmed' => 'Confirmado',
+            'roles' => [
+                'reception' => 'Recepção',
+                'sound' => 'Som',
+                'welcome' => 'Boas-vindas',
+            ],
+            'people' => [
+                'ana' => 'Ana',
+                'bruno' => 'Bruno',
+                'carla' => 'Carla',
+            ],
+        ],
+    ],
     'login' => [
         'meta_title' => 'Entrar',
         'title' => 'Entre na sua conta',

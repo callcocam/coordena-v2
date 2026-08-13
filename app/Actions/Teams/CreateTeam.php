@@ -2,7 +2,7 @@
 
 namespace App\Actions\Teams;
 
-use App\Enums\TeamRole;
+use App\Enums\DefaultCargo;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -20,10 +20,12 @@ class CreateTeam
                 'is_personal' => $isPersonal,
             ]);
 
-            $membership = $team->memberships()->create([
+            $team->memberships()->create([
                 'user_id' => $user->id,
-                'role' => TeamRole::Owner,
+                'is_owner' => true,
             ]);
+
+            $user->assignCargo($team, DefaultCargo::Coordenador->value);
 
             $user->switchTeam($team);
 

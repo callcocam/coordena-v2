@@ -56,7 +56,9 @@ const handleRegisterSuccess = () => {
                 >
                     <KeyRound class="h-7 w-7 text-muted-foreground" />
                 </div>
-                <p class="font-medium">{{ t('app.settings.passkeys.empty_title') }}</p>
+                <p class="font-medium">
+                    {{ t('app.settings.passkeys.empty_title') }}
+                </p>
                 <p class="mt-1 text-sm text-muted-foreground">
                     {{ t('app.settings.passkeys.empty_description') }}
                 </p>

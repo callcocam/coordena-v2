@@ -47,7 +47,9 @@ const removeMember = () => {
     <Dialog :open="props.open" @update:open="emit('update:open', $event)">
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>{{ t('app.teams.members.remove_title') }}</DialogTitle>
+                <DialogTitle>{{
+                    t('app.teams.members.remove_title')
+                }}</DialogTitle>
                 <DialogDescription>
                     {{ t('app.teams.members.remove_confirm_prefix') }}
                     <strong>{{ props.member?.name }}</strong>

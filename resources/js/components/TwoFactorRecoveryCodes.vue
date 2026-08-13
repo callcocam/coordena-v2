@@ -81,7 +81,8 @@ onMounted(async () => {
                         type="submit"
                         :disabled="processing"
                     >
-                        <RefreshCw /> {{ t('app.settings.two_factor.recovery.regenerate') }}
+                        <RefreshCw />
+                        {{ t('app.settings.two_factor.recovery.regenerate') }}
                     </Button>
                 </Form>
             </div>

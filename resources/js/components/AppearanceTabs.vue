@@ -9,7 +9,11 @@ const { appearance, updateAppearance } = useAppearance();
 const tabs = [
     { value: 'light', Icon: Sun, label: 'app.settings.appearance.tabs.light' },
     { value: 'dark', Icon: Moon, label: 'app.settings.appearance.tabs.dark' },
-    { value: 'system', Icon: Monitor, label: 'app.settings.appearance.tabs.system' },
+    {
+        value: 'system',
+        Icon: Monitor,
+        label: 'app.settings.appearance.tabs.system',
+    },
 ] as const;
 </script>
 

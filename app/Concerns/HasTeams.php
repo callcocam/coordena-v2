@@ -5,9 +5,10 @@ namespace App\Concerns;
 use App\Data\TeamPermissions;
 use App\Data\UserTeam;
 use App\Enums\TeamPermission;
-use App\Enums\TeamRole;
 use App\Models\Membership;
+use App\Models\Role;
 use App\Models\Team;
+use App\Support\PermissionCatalog;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,6 +19,13 @@ use Illuminate\Support\Facades\URL;
 trait HasTeams
 {
     /**
+     * Cached effective permission names keyed by team id.
+     *
+     * @var array<string, Collection<int, string>>
+     */
+    protected array $cargoPermissionCache = [];
+
+    /**
      * Get all of the teams the user belongs to.
      *
      * @return BelongsToMany<Team, $this>
@@ -25,7 +33,7 @@ trait HasTeams
     public function teams(): BelongsToMany
     {
         return $this->belongsToMany(Team::class, 'team_members', 'user_id', 'team_id')
-            ->withPivot(['role'])
+            ->withPivot(['is_owner'])
             ->withTimestamps();
     }
 
@@ -43,7 +51,7 @@ trait HasTeams
             'id',
             'id',
             'team_id',
-        )->where('team_members.role', TeamRole::Owner->value);
+        )->where('team_members.is_owner', true);
     }
 
     /**
@@ -54,6 +62,17 @@ trait HasTeams
     public function teamMemberships(): HasMany
     {
         return $this->hasMany(Membership::class, 'user_id');
+    }
+
+    /**
+     * Get all cargos assigned to the user, across every team.
+     *
+     * @return BelongsToMany<Role, $this>
+     */
+    public function cargos(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'role_user', 'user_id', 'role_id')
+            ->withPivot(['team_id']);
     }
 
     /**
@@ -114,18 +133,136 @@ trait HasTeams
      */
     public function ownsTeam(Team $team): bool
     {
-        return $this->teamRole($team) === TeamRole::Owner;
+        return (bool) $this->teamMemberships()
+            ->where('team_id', $team->id)
+            ->value('is_owner');
     }
 
     /**
-     * Get the user's role on the given team.
+     * Get the cargos the user holds on the given team.
+     *
+     * @return Collection<int, Role>
      */
-    public function teamRole(Team $team): ?TeamRole
+    public function cargosForTeam(Team $team): Collection
     {
-        return $this->teamMemberships()
-            ->where('team_id', $team->id)
-            ->first()
-            ?->role;
+        return $this->cargos()
+            ->wherePivot('team_id', $team->id)
+            ->get();
+    }
+
+    /**
+     * Determine if the user holds the cargo with the given key on the team.
+     */
+    public function hasCargo(Team $team, string $key): bool
+    {
+        return $this->cargosForTeam($team)->contains('key', $key);
+    }
+
+    /**
+     * Assign a cargo to the user on the given team.
+     */
+    public function assignCargo(Team $team, Role|string $cargo): void
+    {
+        $role = $cargo instanceof Role ? $cargo : $this->resolveCargo($team, $cargo);
+
+        if ($role === null) {
+            return;
+        }
+
+        $alreadyAssigned = $this->cargos()
+            ->wherePivot('team_id', $team->id)
+            ->where('roles.id', $role->id)
+            ->exists();
+
+        if (! $alreadyAssigned) {
+            $this->cargos()->attach($role->id, ['team_id' => $team->id]);
+        }
+
+        $this->forgetCargoCache($team);
+    }
+
+    /**
+     * Remove a cargo from the user on the given team.
+     */
+    public function removeCargo(Team $team, Role|string $cargo): void
+    {
+        $role = $cargo instanceof Role ? $cargo : $this->resolveCargo($team, $cargo);
+
+        if ($role === null) {
+            return;
+        }
+
+        $this->cargos()
+            ->wherePivot('team_id', $team->id)
+            ->detach($role->id);
+
+        $this->forgetCargoCache($team);
+    }
+
+    /**
+     * Replace the user's cargos on the given team with the given keys.
+     *
+     * @param  list<string>  $keys
+     */
+    public function syncCargos(Team $team, array $keys): void
+    {
+        $this->cargos()
+            ->wherePivot('team_id', $team->id)
+            ->detach();
+
+        foreach (array_unique($keys) as $key) {
+            $role = $this->resolveCargo($team, $key);
+
+            if ($role !== null) {
+                $this->cargos()->attach($role->id, ['team_id' => $team->id]);
+            }
+        }
+
+        $this->forgetCargoCache($team);
+    }
+
+    /**
+     * Get the union of permission names granted by the user's cargos on the team.
+     *
+     * A super cargo short-circuits to the whole catalog.
+     *
+     * @return Collection<int, string>
+     */
+    public function permissionNamesForTeam(Team $team): Collection
+    {
+        if (isset($this->cargoPermissionCache[$team->id])) {
+            return $this->cargoPermissionCache[$team->id];
+        }
+
+        $cargos = $this->cargos()
+            ->wherePivot('team_id', $team->id)
+            ->with('permissions')
+            ->get();
+
+        if ($cargos->contains(fn (Role $role): bool => $role->is_super)) {
+            return $this->cargoPermissionCache[$team->id] = collect(PermissionCatalog::names());
+        }
+
+        return $this->cargoPermissionCache[$team->id] = $cargos
+            ->flatMap(fn (Role $role): Collection => $role->permissions->pluck('name'))
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * Determine if the user has the given permission name on the team.
+     */
+    public function hasPermissionForTeam(Team $team, string $name): bool
+    {
+        return $this->permissionNamesForTeam($team)->contains($name);
+    }
+
+    /**
+     * Determine if the user has the given permission on the team.
+     */
+    public function hasTeamPermission(Team $team, TeamPermission $permission): bool
+    {
+        return $this->hasPermissionForTeam($team, $permission->value);
     }
 
     /**
@@ -147,15 +284,18 @@ trait HasTeams
      */
     public function toUserTeam(Team $team): UserTeam
     {
-        $role = $this->teamRole($team);
+        $cargos = $this->cargosForTeam($team)
+            ->map(fn (Role $role): array => ['key' => $role->key, 'name' => $role->name])
+            ->values()
+            ->all();
 
         return new UserTeam(
             id: $team->id,
             name: $team->name,
             slug: $team->slug,
             isPersonal: $team->is_personal,
-            role: $role?->value,
-            roleLabel: $role?->label(),
+            isOwner: $this->ownsTeam($team),
+            cargos: $cargos,
             isCurrent: $this->isCurrentTeam($team),
         );
     }
@@ -165,16 +305,14 @@ trait HasTeams
      */
     public function toTeamPermissions(Team $team): TeamPermissions
     {
-        $role = $this->teamRole($team);
-
         return new TeamPermissions(
-            canUpdateTeam: $role?->hasPermission(TeamPermission::UpdateTeam) ?? false,
-            canDeleteTeam: $role?->hasPermission(TeamPermission::DeleteTeam) ?? false,
-            canAddMember: $role?->hasPermission(TeamPermission::AddMember) ?? false,
-            canUpdateMember: $role?->hasPermission(TeamPermission::UpdateMember) ?? false,
-            canRemoveMember: $role?->hasPermission(TeamPermission::RemoveMember) ?? false,
-            canCreateInvitation: $role?->hasPermission(TeamPermission::CreateInvitation) ?? false,
-            canCancelInvitation: $role?->hasPermission(TeamPermission::CancelInvitation) ?? false,
+            canUpdateTeam: $this->hasPermissionForTeam($team, TeamPermission::UpdateTeam->value),
+            canDeleteTeam: $this->hasPermissionForTeam($team, TeamPermission::DeleteTeam->value),
+            canAddMember: $this->hasPermissionForTeam($team, TeamPermission::AddMember->value),
+            canUpdateMember: $this->hasPermissionForTeam($team, TeamPermission::UpdateMember->value),
+            canRemoveMember: $this->hasPermissionForTeam($team, TeamPermission::RemoveMember->value),
+            canCreateInvitation: $this->hasPermissionForTeam($team, TeamPermission::CreateInvitation->value),
+            canCancelInvitation: $this->hasPermissionForTeam($team, TeamPermission::CancelInvitation->value),
         );
     }
 
@@ -187,10 +325,25 @@ trait HasTeams
     }
 
     /**
-     * Determine if the user has the given permission on the team.
+     * Resolve a cargo by key, preferring a team-specific cargo over a global one.
      */
-    public function hasTeamPermission(Team $team, TeamPermission $permission): bool
+    protected function resolveCargo(Team $team, string $key): ?Role
     {
-        return $this->teamRole($team)?->hasPermission($permission) ?? false;
+        return Role::query()
+            ->byKey($key)
+            ->where(function ($query) use ($team): void {
+                $query->whereNull('team_id')
+                    ->orWhere('team_id', $team->id);
+            })
+            ->orderByRaw('team_id IS NULL')
+            ->first();
+    }
+
+    /**
+     * Forget the cached permission names for the given team.
+     */
+    protected function forgetCargoCache(Team $team): void
+    {
+        unset($this->cargoPermissionCache[$team->id]);
     }
 }

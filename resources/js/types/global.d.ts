@@ -1,6 +1,6 @@
-import type { Auth } from '@/types/auth';
-import type { Team } from '@/types/teams';
 import type { TranslationTree } from '@/composables/useT';
+import type { Auth } from '@/types/auth';
+import type { Cargo, Team } from '@/types/teams';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -23,6 +23,8 @@ declare module '@inertiajs/core' {
             sidebarOpen: boolean;
             currentTeam: Team | null;
             teams: Team[];
+            permissions: Record<string, boolean>;
+            cargos: Cargo[];
             translations: Record<string, TranslationTree>;
             locale: string;
             [key: string]: unknown;

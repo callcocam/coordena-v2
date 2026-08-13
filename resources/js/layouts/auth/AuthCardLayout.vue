@@ -19,7 +19,9 @@ const props = defineProps<{
 
 const { t } = useT();
 
-const resolvedTitle = computed<string>(() => (props.title ? t(props.title) : ''));
+const resolvedTitle = computed<string>(() =>
+    props.title ? t(props.title) : '',
+);
 const resolvedDescription = computed<string>(() =>
     props.description ? t(props.description) : '',
 );
@@ -44,7 +46,9 @@ const resolvedDescription = computed<string>(() =>
             <div class="flex flex-col gap-6">
                 <Card class="rounded-xl">
                     <CardHeader class="px-10 pt-8 pb-0 text-center">
-                        <CardTitle class="text-xl">{{ resolvedTitle }}</CardTitle>
+                        <CardTitle class="text-xl">{{
+                            resolvedTitle
+                        }}</CardTitle>
                         <CardDescription>
                             {{ resolvedDescription }}
                         </CardDescription>

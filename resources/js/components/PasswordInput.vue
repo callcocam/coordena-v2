@@ -40,7 +40,9 @@ defineExpose({
                 )
             "
             :aria-label="
-                showPassword ? t('app.common.password.hide') : t('app.common.password.show')
+                showPassword
+                    ? t('app.common.password.hide')
+                    : t('app.common.password.show')
             "
             :tabindex="-1"
         >

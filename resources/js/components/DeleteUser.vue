@@ -34,16 +34,20 @@ const passwordInput = useTemplateRef('passwordInput');
             class="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10"
         >
             <div class="relative space-y-0.5 text-red-600 dark:text-red-100">
-                <p class="font-medium">{{ t('app.settings.delete_account.warning') }}</p>
+                <p class="font-medium">
+                    {{ t('app.settings.delete_account.warning') }}
+                </p>
                 <p class="text-sm">
                     {{ t('app.settings.delete_account.warning_desc') }}
                 </p>
             </div>
             <Dialog>
                 <DialogTrigger as-child>
-                    <Button variant="destructive" data-test="delete-user-button">{{
-                        t('app.settings.delete_account.button')
-                    }}</Button>
+                    <Button
+                        variant="destructive"
+                        data-test="delete-user-button"
+                        >{{ t('app.settings.delete_account.button') }}</Button
+                    >
                 </DialogTrigger>
                 <DialogContent>
                     <Form
@@ -61,7 +65,11 @@ const passwordInput = useTemplateRef('passwordInput');
                                 t('app.settings.delete_account.dialog_title')
                             }}</DialogTitle>
                             <DialogDescription>
-                                {{ t('app.settings.delete_account.dialog_description') }}
+                                {{
+                                    t(
+                                        'app.settings.delete_account.dialog_description',
+                                    )
+                                }}
                             </DialogDescription>
                         </DialogHeader>
 
@@ -73,7 +81,11 @@ const passwordInput = useTemplateRef('passwordInput');
                                 id="password"
                                 name="password"
                                 ref="passwordInput"
-                                :placeholder="t('app.settings.delete_account.password_placeholder')"
+                                :placeholder="
+                                    t(
+                                        'app.settings.delete_account.password_placeholder',
+                                    )
+                                "
                             />
                             <InputError :message="errors.password" />
                         </div>
@@ -89,7 +101,9 @@ const passwordInput = useTemplateRef('passwordInput');
                                         }
                                     "
                                 >
-                                    {{ t('app.settings.delete_account.cancel') }}
+                                    {{
+                                        t('app.settings.delete_account.cancel')
+                                    }}
                                 </Button>
                             </DialogClose>
 

@@ -54,7 +54,8 @@ const { verify, isLoading, error, isSupported } = usePasskeyVerify({
                     isLoading
                         ? (props.loadingLabel ??
                           t('app.settings.passkeys.verify.loading_label'))
-                        : (props.label ?? t('app.settings.passkeys.verify.label'))
+                        : (props.label ??
+                          t('app.settings.passkeys.verify.label'))
                 }}
             </Button>
 
@@ -69,7 +70,10 @@ const { verify, isLoading, error, isSupported } = usePasskeyVerify({
             </div>
             <div class="relative flex justify-center text-xs uppercase">
                 <span class="bg-background px-2 text-muted-foreground">
-                    {{ props.separator ?? t('app.settings.passkeys.verify.separator') }}
+                    {{
+                        props.separator ??
+                        t('app.settings.passkeys.verify.separator')
+                    }}
                 </span>
             </div>
         </div>

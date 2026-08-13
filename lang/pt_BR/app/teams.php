@@ -59,6 +59,7 @@ return [
         'title' => 'Membros da equipe',
         'description' => 'Gerencie quem faz parte desta equipe',
         'invite' => 'Convidar membro',
+        'no_cargo' => 'Sem cargo',
         'remove_tooltip' => 'Remover membro',
         'remove_title' => 'Remover membro da equipe',
         'remove_confirm_prefix' => 'Tem certeza de que deseja remover',

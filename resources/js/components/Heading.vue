@@ -14,7 +14,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const { t } = useT();
 
-const resolvedTitle = computed<string>(() => (props.title ? t(props.title) : ''));
+const resolvedTitle = computed<string>(() =>
+    props.title ? t(props.title) : '',
+);
 const resolvedDescription = computed<string>(() =>
     props.description ? t(props.description) : '',
 );

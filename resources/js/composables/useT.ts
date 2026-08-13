@@ -1,6 +1,6 @@
+import { usePage } from '@inertiajs/vue3';
 import type { ComputedRef } from 'vue';
 import { computed } from 'vue';
-import { usePage } from '@inertiajs/vue3';
 
 /**
  * Nested translation tree as shared from the backend via Inertia props.
@@ -39,9 +39,13 @@ function resolve(tree: TranslationTree, key: string): string | undefined {
 /**
  * Replace `:name` placeholders in a translation string.
  */
-function interpolate(message: string, replacements: TranslationReplacements): string {
+function interpolate(
+    message: string,
+    replacements: TranslationReplacements,
+): string {
     return Object.entries(replacements).reduce(
-        (result, [token, value]) => result.replaceAll(`:${token}`, String(value)),
+        (result, [token, value]) =>
+            result.replaceAll(`:${token}`, String(value)),
         message,
     );
 }
@@ -56,10 +60,16 @@ function interpolate(message: string, replacements: TranslationReplacements): st
 export function useT(): UseTReturn {
     const page = usePage();
 
-    const locale = computed<string>(() => (page.props.locale as string) ?? 'pt_BR');
+    const locale = computed<string>(
+        () => (page.props.locale as string) ?? 'pt_BR',
+    );
 
-    function t(key: string, replacements: TranslationReplacements = {}): string {
-        const tree = (page.props.translations as TranslationTree | undefined) ?? {};
+    function t(
+        key: string,
+        replacements: TranslationReplacements = {},
+    ): string {
+        const tree =
+            (page.props.translations as TranslationTree | undefined) ?? {};
         const message = resolve(tree, key);
 
         if (message === undefined) {

@@ -77,12 +77,16 @@ const handleCancel = () => {
         class="space-y-4 rounded-lg border border-border bg-muted/50 p-4"
     >
         <div class="grid gap-2">
-            <Label for="passkey-name">{{ t('app.settings.passkeys.register.name') }}</Label>
+            <Label for="passkey-name">{{
+                t('app.settings.passkeys.register.name')
+            }}</Label>
             <Input
                 id="passkey-name"
                 type="text"
                 v-model="name"
-                :placeholder="t('app.settings.passkeys.register.name_placeholder')"
+                :placeholder="
+                    t('app.settings.passkeys.register.name_placeholder')
+                "
                 class="mt-1 block w-full border-foreground/20"
                 autofocus
             />

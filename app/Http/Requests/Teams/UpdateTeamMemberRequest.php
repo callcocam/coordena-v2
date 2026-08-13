@@ -2,7 +2,8 @@
 
 namespace App\Http\Requests\Teams;
 
-use App\Enums\TeamRole;
+use App\Models\Role;
+use App\Models\Team;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -16,8 +17,18 @@ class UpdateTeamMemberRequest extends FormRequest
      */
     public function rules(): array
     {
+        $team = $this->route('team');
+
+        abort_if(! $team instanceof Team, 404);
+
+        $assignableKeys = Role::query()
+            ->assignableForTeam($team)
+            ->pluck('key')
+            ->all();
+
         return [
-            'role' => ['required', 'string', Rule::in(array_column(TeamRole::assignable(), 'value'))],
+            'cargos' => ['required', 'array'],
+            'cargos.*' => ['string', Rule::in($assignableKeys)],
         ];
     }
 }

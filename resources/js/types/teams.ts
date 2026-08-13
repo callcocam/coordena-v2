@@ -1,12 +1,15 @@
-export type TeamRole = 'owner' | 'admin' | 'member';
+export type Cargo = {
+    key: string;
+    name: string;
+};
 
 export type Team = {
     id: string;
     name: string;
     slug: string;
     isPersonal: boolean;
-    role?: TeamRole;
-    roleLabel?: string;
+    isOwner?: boolean;
+    cargos?: Cargo[];
     isCurrent?: boolean;
 };
 
@@ -15,15 +18,15 @@ export type TeamMember = {
     name: string;
     email: string;
     avatar?: string | null;
-    role: TeamRole;
-    role_label: string;
+    isOwner: boolean;
+    cargos: Cargo[];
 };
 
 export type TeamInvitation = {
     code: string;
     email: string;
-    role: TeamRole;
-    role_label: string;
+    role_key: string | null;
+    role_label: string | null;
     created_at: string;
 };
 
@@ -52,6 +55,6 @@ export type TeamPermissions = {
 };
 
 export type RoleOption = {
-    value: TeamRole;
-    label: string;
+    key: string;
+    name: string;
 };

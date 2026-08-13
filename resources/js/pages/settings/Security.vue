@@ -77,7 +77,9 @@ const { t } = useT();
                     name="current_password"
                     class="mt-1 block w-full"
                     autocomplete="current-password"
-                    :placeholder="t('app.settings.security.password.current_placeholder')"
+                    :placeholder="
+                        t('app.settings.security.password.current_placeholder')
+                    "
                 />
                 <InputError :message="errors.current_password" />
             </div>
@@ -91,7 +93,9 @@ const { t } = useT();
                     name="password"
                     class="mt-1 block w-full"
                     autocomplete="new-password"
-                    :placeholder="t('app.settings.security.password.new_placeholder')"
+                    :placeholder="
+                        t('app.settings.security.password.new_placeholder')
+                    "
                     :passwordrules="props.passwordRules"
                 />
                 <InputError :message="errors.password" />
@@ -106,7 +110,9 @@ const { t } = useT();
                     name="password_confirmation"
                     class="mt-1 block w-full"
                     autocomplete="new-password"
-                    :placeholder="t('app.settings.security.password.confirm_placeholder')"
+                    :placeholder="
+                        t('app.settings.security.password.confirm_placeholder')
+                    "
                     :passwordrules="props.passwordRules"
                 />
                 <InputError :message="errors.password_confirmation" />

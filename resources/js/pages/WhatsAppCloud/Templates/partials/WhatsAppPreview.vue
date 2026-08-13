@@ -1,0 +1,66 @@
+<script setup>
+import { CornerUpLeft, Link2, Phone } from '@lucide/vue';
+import { computed } from 'vue';
+import { formatWa } from './format';
+
+const props = defineProps({
+    header: { type: String, default: '' },
+    body: { type: String, default: '' },
+    footer: { type: String, default: '' },
+    buttons: { type: Array, default: () => [] },
+});
+
+const headerHtml = computed(() => formatWa(props.header));
+const bodyHtml = computed(() => formatWa(props.body || '…'));
+
+const visibleButtons = computed(() =>
+    props.buttons.filter((b) => (b.text || '').trim() !== ''),
+);
+
+const ICONS = { URL: Link2, PHONE_NUMBER: Phone };
+function buttonIcon(type) {
+    return ICONS[type] ?? CornerUpLeft;
+}
+</script>
+
+<template>
+    <div class="rounded-xl bg-[#e5ddd5] p-3 dark:bg-muted">
+        <div
+            class="wa-bubble relative max-w-[85%] rounded-lg rounded-tl-none bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm dark:bg-neutral-800 dark:text-neutral-100"
+        >
+            <div v-if="header" class="mb-1 font-semibold" v-html="headerHtml" />
+            <div class="wa-body whitespace-pre-wrap" v-html="bodyHtml" />
+            <div
+                v-if="footer"
+                class="mt-1 text-xs text-neutral-500 dark:text-neutral-400"
+            >
+                {{ footer }}
+            </div>
+            <span class="mt-1 block text-right text-[10px] text-neutral-400">
+                12:00 ✓✓
+            </span>
+        </div>
+        <div v-if="visibleButtons.length" class="mt-1 space-y-1">
+            <div
+                v-for="(b, i) in visibleButtons"
+                :key="i"
+                class="flex items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-2 text-sm font-medium text-[#00a5f4] shadow-sm dark:bg-neutral-800"
+            >
+                <component :is="buttonIcon(b.type)" class="h-4 w-4" />
+                {{ b.text || 'Botão' }}
+            </div>
+        </div>
+    </div>
+</template>
+
+<style scoped>
+/* The formatted body is injected via v-html (formatWa), so the {{n}} variable
+   highlight can't be a Tailwind utility — scope a minimal rule for it. */
+.wa-body :deep(.b-var) {
+    border-radius: 4px;
+    background: rgb(0 165 244 / 0.12);
+    padding: 0 2px;
+    font-weight: 600;
+    color: #0093d8;
+}
+</style>

@@ -53,7 +53,9 @@ function handleOpenChange(value: boolean) {
                 </DialogHeader>
 
                 <div class="grid gap-2">
-                    <Label for="name">{{ t('app.teams.create.name_label') }}</Label>
+                    <Label for="name">{{
+                        t('app.teams.create.name_label')
+                    }}</Label>
                     <Input
                         id="name"
                         name="name"

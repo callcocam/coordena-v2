@@ -48,7 +48,9 @@ const declineInvitation = (invitation: DashboardInvitation) => {
     <Dialog v-model:open="open">
         <DialogContent data-test="pending-invitations-modal">
             <DialogHeader>
-                <DialogTitle>{{ t('app.teams.invitations.pending_title') }}</DialogTitle>
+                <DialogTitle>{{
+                    t('app.teams.invitations.pending_title')
+                }}</DialogTitle>
                 <DialogDescription>
                     {{ t('app.teams.invitations.pending_description') }}
                 </DialogDescription>

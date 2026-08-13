@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "859863f5ca81e4a2e3cf62f862513073",
+    "content-hash": "2cc6bca686d59ce752496e05519c37c0",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -119,6 +119,103 @@
                 }
             ],
             "time": "2026-06-14T18:21:03+00:00"
+        },
+        {
+            "name": "callcocam/laravel-whatsapp-cloud",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/callcocam/laravel-whatsapp-cloud.git",
+                "reference": "3a80ac7b473e94dc5a11185b26aaa0845b4d364a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/callcocam/laravel-whatsapp-cloud/zipball/3a80ac7b473e94dc5a11185b26aaa0845b4d364a",
+                "reference": "3a80ac7b473e94dc5a11185b26aaa0845b4d364a",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "illuminate/console": "^11.0 || ^12.0 || ^13.0",
+                "illuminate/database": "^11.0 || ^12.0 || ^13.0",
+                "illuminate/http": "^11.0 || ^12.0 || ^13.0",
+                "illuminate/support": "^11.0 || ^12.0 || ^13.0",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "inertiajs/inertia-laravel": "^1.3 || ^2.0",
+                "larastan/larastan": "^3.0",
+                "laravel/pint": "^1.20",
+                "orchestra/testbench": "^9.0 || ^10.0 || ^11.0",
+                "pestphp/pest": "^3.0 || ^4.0",
+                "pestphp/pest-plugin-laravel": "^3.0 || ^4.0"
+            },
+            "suggest": {
+                "inertiajs/inertia-laravel": "Enables the template-management web panel (Inertia + Vue). Publish the self-contained fallback page with `vendor:publish --tag=whatsapp-cloud-inertia`, or scaffold a native shadcn-vue page with `php artisan whatsapp:panel:scaffold`."
+            },
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Callcocam\\WhatsAppCloud\\WhatsAppCloudServiceProvider"
+                    ],
+                    "aliases": {
+                        "WhatsApp": "Callcocam\\WhatsAppCloud\\Facades\\WhatsApp"
+                    }
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Callcocam\\WhatsAppCloud\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Callcocam\\WhatsAppCloud\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "lint": [
+                    "pint --parallel"
+                ],
+                "test:lint": [
+                    "pint --parallel --test"
+                ],
+                "test:types": [
+                    "phpstan analyse"
+                ],
+                "test:unit": [
+                    "pest"
+                ],
+                "test": [
+                    "@test:lint",
+                    "@test:types",
+                    "@test:unit"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Claudio Campos",
+                    "email": "callcocam@gmail.com"
+                }
+            ],
+            "description": "Núcleo reutilizável da WhatsApp Cloud API (Meta) para Laravel: envio de templates/sessão/interativo por-tenant, webhook com assinatura e eventos, e gestão de templates via Artisan.",
+            "keywords": [
+                "laravel",
+                "messaging",
+                "meta",
+                "whatsapp",
+                "whatsapp-cloud-api"
+            ],
+            "support": {
+                "source": "https://github.com/callcocam/laravel-whatsapp-cloud/tree/main",
+                "issues": "https://github.com/callcocam/laravel-whatsapp-cloud/issues"
+            },
+            "time": "2026-08-12T02:37:40+00:00"
         },
         {
             "name": "carbonphp/carbon-doctrine-types",
@@ -11458,9 +11555,18 @@
             "time": "2025-12-08T11:19:18+00:00"
         }
     ],
-    "aliases": [],
+    "aliases": [
+        {
+            "package": "callcocam/laravel-whatsapp-cloud",
+            "version": "dev-main",
+            "alias": "0.1.99",
+            "alias_normalized": "0.1.99.0"
+        }
+    ],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "callcocam/laravel-whatsapp-cloud": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {

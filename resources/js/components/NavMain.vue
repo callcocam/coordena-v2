@@ -21,7 +21,9 @@ const { t } = useT();
 
 <template>
     <SidebarGroup class="px-2 py-0">
-        <SidebarGroupLabel>{{ t('app.nav.sidebar.platform') }}</SidebarGroupLabel>
+        <SidebarGroupLabel>{{
+            t('app.nav.sidebar.platform')
+        }}</SidebarGroupLabel>
         <SidebarMenu>
             <SidebarMenuItem v-for="item in items" :key="item.title">
                 <SidebarMenuButton

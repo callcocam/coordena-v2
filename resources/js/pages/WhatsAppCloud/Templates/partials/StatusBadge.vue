@@ -1,0 +1,33 @@
+<script setup>
+import { computed } from 'vue';
+import { Badge } from '@/components/ui/badge';
+import { statusClass, statusLabel } from './format';
+
+const props = defineProps({
+    status: { type: String, default: '' },
+});
+
+// Map a Meta template status bucket to a shadcn Badge variant + color class,
+// staying inside the app's design tokens (no bespoke palette).
+const STYLES = {
+    approved: {
+        variant: 'outline',
+        class: 'border-transparent bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+    },
+    pending: {
+        variant: 'outline',
+        class: 'border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-400',
+    },
+    rejected: { variant: 'destructive', class: '' },
+    paused: { variant: 'secondary', class: '' },
+};
+
+const style = computed(
+    () => STYLES[statusClass(props.status)] ?? STYLES.paused,
+);
+const label = computed(() => statusLabel(props.status));
+</script>
+
+<template>
+    <Badge :variant="style.variant" :class="style.class">{{ label }}</Badge>
+</template>
