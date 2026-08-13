@@ -22,6 +22,8 @@ Homestead.yaml
 npm-debug.log
 yarn-error.log
 /auth.json
+# Dados reais de congregações — nunca versionar
+/database/data/*.local.php
 /.fleet
 /.idea
 /.nova

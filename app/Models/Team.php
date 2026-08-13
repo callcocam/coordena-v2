@@ -9,8 +9,11 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Support\WhatsappTerms;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -19,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $slug
  * @property bool $is_personal
+ * @property bool $whatsapp_api_enabled
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -27,11 +31,20 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, User> $members
  * @property-read Collection<int, Role> $roles
  */
-#[Fillable(['name', 'slug', 'is_personal'])]
+#[Fillable(['name', 'slug', 'is_personal', 'whatsapp_api_enabled', 'home_congregation_id'])]
 class Team extends Model
 {
     /** @use HasFactory<TeamFactory> */
     use GeneratesUniqueTeamSlugs, HasFactory, HasUlids, SoftDeletes;
+
+    /**
+     * The model's default attribute values.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'whatsapp_api_enabled' => true,
+    ];
 
     /**
      * Bootstrap the model and its traits.
@@ -104,6 +117,26 @@ class Team extends Model
     public function invitations(): HasMany
     {
         return $this->hasMany(TeamInvitation::class);
+    }
+
+    /**
+     * Get the congregação do time (local dos discursos "home").
+     *
+     * @return BelongsTo<Congregation, $this>
+     */
+    public function homeCongregation(): BelongsTo
+    {
+        return $this->belongsTo(Congregation::class, 'home_congregation_id');
+    }
+
+    /**
+     * Get the coordenadores de discursos deste time.
+     *
+     * @return HasMany<Coordinator, $this>
+     */
+    public function coordinators(): HasMany
+    {
+        return $this->hasMany(Coordinator::class);
     }
 
     /**

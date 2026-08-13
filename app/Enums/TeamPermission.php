@@ -15,4 +15,11 @@ enum TeamPermission: string
     case CancelInvitation = 'invitation:cancel';
 
     case ManageRoles = 'role:manage';
+
+    case ViewCongregations = 'congregations:view';
+    case ManageCongregations = 'congregations:manage';
+
+    case ViewPublicTalks = 'public-talks:view';
+    case ManagePublicTalks = 'public-talks:manage';
+    case NotifyPublicTalks = 'public-talks:notify';
 }

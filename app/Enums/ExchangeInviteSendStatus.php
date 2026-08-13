@@ -1,0 +1,15 @@
+<?php
+
+namespace App\Enums;
+
+/**
+ * Situação de um envio do convite a uma congregação.
+ */
+enum ExchangeInviteSendStatus: string
+{
+    case Pending = 'pending';
+    case Sent = 'sent';
+    case Answered = 'answered';
+    case Declined = 'declined';
+    case Expired = 'expired';
+}

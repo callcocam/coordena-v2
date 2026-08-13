@@ -78,10 +78,22 @@ enum DefaultCargo: string
                 'service:manage',
                 'congregation:view',
             ],
-            self::Publicador,
-            self::ServoMinisterial,
-            self::CoordenadorDiscursos,
+            self::CoordenadorDiscursos => [
+                'congregation:view',
+                'congregations:view',
+                'congregations:manage',
+                'public-talks:view',
+                'public-talks:manage',
+                'public-talks:notify',
+            ],
             self::Ajudante => [
+                'congregation:view',
+                'congregations:view',
+                'public-talks:view',
+                'public-talks:manage',
+            ],
+            self::Publicador,
+            self::ServoMinisterial => [
                 'congregation:view',
             ],
         };

@@ -45,6 +45,15 @@ class PermissionCatalog
                 'service:view' => 'Ver serviço de campo',
                 'service:manage' => 'Gerenciar serviço de campo',
             ],
+            'congregations' => [
+                'congregations:view' => 'Ver acervo de congregações e oradores',
+                'congregations:manage' => 'Gerenciar acervo de congregações e oradores',
+            ],
+            'public-talks' => [
+                'public-talks:view' => 'Ver programação de discursos públicos',
+                'public-talks:manage' => 'Gerenciar programação de discursos públicos',
+                'public-talks:notify' => 'Notificar oradores e congregações',
+            ],
         ];
     }
 
