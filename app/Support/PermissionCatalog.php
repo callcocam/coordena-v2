@@ -54,6 +54,9 @@ class PermissionCatalog
                 'public-talks:manage' => 'Gerenciar programação de discursos públicos',
                 'public-talks:notify' => 'Notificar oradores e congregações',
             ],
+            'whatsapp' => [
+                'whatsapp:manage' => 'Gerenciar conexão do WhatsApp',
+            ],
         ];
     }
 

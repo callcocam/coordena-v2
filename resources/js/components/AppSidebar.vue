@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from '@lucide/vue';
+import { BookOpen, CalendarDays, FolderGit2, LayoutGrid, Library, UserCog } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -16,22 +16,57 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
+import { index as congregationsIndex } from '@/routes/acervo/congregations';
+import { schedule } from '@/routes/public-talks';
+import { index as coordinatorsIndex } from '@/routes/public-talks/coordinators';
 import type { NavItem } from '@/types';
 
 const page = usePage();
+const { can } = usePermissions();
 
 const dashboardUrl = computed(() =>
     page.props.currentTeam ? dashboard(page.props.currentTeam.slug).url : '/',
 );
 
-const mainNavItems = computed<NavItem[]>(() => [
-    {
-        title: 'app.nav.sidebar.dashboard',
-        href: dashboardUrl.value,
-        icon: LayoutGrid,
-    },
-]);
+const mainNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [
+        {
+            title: 'app.nav.sidebar.dashboard',
+            href: dashboardUrl.value,
+            icon: LayoutGrid,
+        },
+    ];
+
+    const teamSlug = page.props.currentTeam?.slug;
+
+    if (teamSlug && can('public-talks:view')) {
+        items.push({
+            title: 'app.public_talks.nav.schedule',
+            href: schedule(teamSlug).url,
+            icon: CalendarDays,
+        });
+    }
+
+    if (teamSlug && can('congregations:view')) {
+        items.push({
+            title: 'app.public_talks.nav.acervo',
+            href: congregationsIndex(teamSlug).url,
+            icon: Library,
+        });
+    }
+
+    if (teamSlug && can('public-talks:manage')) {
+        items.push({
+            title: 'app.public_talks.nav.coordinators',
+            href: coordinatorsIndex(teamSlug).url,
+            icon: UserCog,
+        });
+    }
+
+    return items;
+});
 
 const footerNavItems: NavItem[] = [
     {

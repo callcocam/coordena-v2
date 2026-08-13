@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
+use App\Http\Controllers\Settings\WhatsappConnectionController;
 use App\Http\Controllers\Teams\CargoController;
 use App\Http\Controllers\Teams\TeamController;
 use App\Http\Controllers\Teams\TeamInvitationController;
@@ -15,6 +16,12 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::patch('settings/whatsapp/mode', [WhatsappConnectionController::class, 'updateMode'])->name('whatsapp.mode');
+    Route::post('settings/whatsapp/agree', [WhatsappConnectionController::class, 'agree'])
+        ->middleware('whatsapp.api:mode-only')
+        ->name('whatsapp.agree');
+    Route::post('settings/whatsapp/cloud', [WhatsappConnectionController::class, 'updateCloud'])->name('whatsapp.cloud.save');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { useT } from '@/composables/useT';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
+import WhatsappConnectionCard from '@/pages/settings/partials/WhatsappConnectionCard.vue';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
 
@@ -112,6 +113,8 @@ const user = computed(() => page.props.auth.user);
             </div>
         </Form>
     </div>
+
+    <WhatsappConnectionCard />
 
     <DeleteUser />
 </template>

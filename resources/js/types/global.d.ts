@@ -1,6 +1,7 @@
 import type { TranslationTree } from '@/composables/useT';
 import type { Auth } from '@/types/auth';
 import type { Cargo, Team } from '@/types/teams';
+import type { WhatsappState } from '@/types/whatsapp';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -26,6 +27,7 @@ declare module '@inertiajs/core' {
             permissions: Record<string, boolean>;
             cargos: Cargo[];
             translations: Record<string, TranslationTree>;
+            whatsapp: WhatsappState | null;
             locale: string;
             [key: string]: unknown;
         };

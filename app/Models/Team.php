@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Concerns\GeneratesUniqueTeamSlugs;
+use App\Support\WhatsappTerms;
+use Callcocam\WhatsAppCloud\Support\ArrayCredentials;
 use Database\Factories\TeamFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Support\WhatsappTerms;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -140,6 +141,55 @@ class Team extends Model
     }
 
     /**
+     * Get the team's WhatsApp Cloud API connection (Meta credentials).
+     *
+     * @return HasOne<TeamWhatsappConnection, $this>
+     */
+    public function whatsappConnection(): HasOne
+    {
+        return $this->hasOne(TeamWhatsappConnection::class);
+    }
+
+    /**
+     * Whether the team wants to use the official WhatsApp Cloud API at all.
+     */
+    public function usesWhatsappApi(): bool
+    {
+        return (bool) $this->whatsapp_api_enabled;
+    }
+
+    /**
+     * Whether the team's Meta Cloud credentials are present and usable.
+     */
+    public function isWhatsappConnected(): bool
+    {
+        return $this->whatsappConnection?->isConnected() ?? false;
+    }
+
+    /**
+     * Whether someone on the team has accepted the current WhatsApp terms.
+     */
+    public function hasAcceptedWhatsappTerms(): bool
+    {
+        return WhatsappTerms::acceptedByTeam($this);
+    }
+
+    /**
+     * Whether the team can actually send via the WhatsApp Cloud API right now:
+     * the API is enabled, the terms are accepted, and either the team has its
+     * own credentials or a shared default number is configured.
+     */
+    public function canSendWhatsappApi(): bool
+    {
+        if (! $this->usesWhatsappApi() || ! $this->hasAcceptedWhatsappTerms()) {
+            return false;
+        }
+
+        return $this->isWhatsappConnected()
+            || ArrayCredentials::fromArray(config('whatsapp-cloud.default')) !== null;
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -148,6 +198,7 @@ class Team extends Model
     {
         return [
             'is_personal' => 'boolean',
+            'whatsapp_api_enabled' => 'boolean',
         ];
     }
 

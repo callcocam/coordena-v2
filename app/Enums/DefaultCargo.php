@@ -85,6 +85,7 @@ enum DefaultCargo: string
                 'public-talks:view',
                 'public-talks:manage',
                 'public-talks:notify',
+                'whatsapp:manage',
             ],
             self::Ajudante => [
                 'congregation:view',

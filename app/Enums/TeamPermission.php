@@ -22,4 +22,6 @@ enum TeamPermission: string
     case ViewPublicTalks = 'public-talks:view';
     case ManagePublicTalks = 'public-talks:manage';
     case NotifyPublicTalks = 'public-talks:notify';
+
+    case ManageWhatsapp = 'whatsapp:manage';
 }

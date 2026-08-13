@@ -2,6 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\TeamPermission;
+use App\Models\User;
+use App\Support\WhatsappTerms;
+use Callcocam\WhatsAppCloud\Support\ArrayCredentials;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -59,7 +63,49 @@ class HandleInertiaRequests extends Middleware
                 'pagination' => trans('pagination'),
                 'validation' => trans('validation'),
             ],
+            'whatsapp' => fn (): ?array => $this->whatsappState($user),
             'locale' => app()->getLocale(),
+        ];
+    }
+
+    /**
+     * Reusable WhatsApp connection state for the current team, consumed by the
+     * settings connection card and anywhere WhatsApp-dependent options are gated.
+     *
+     * @return array{apiEnabled: bool, connected: bool, canManage: bool, canManageTemplates: bool, termsAccepted: bool, metaConfigured: bool, usesSharedNumber: bool, verifiedName: string|null, qualityRating: string|null, messagingLimit: string|null}|null
+     */
+    protected function whatsappState(?User $user): ?array
+    {
+        $team = $user?->currentTeam;
+
+        if ($team === null) {
+            return null;
+        }
+
+        $connection = $team->whatsappConnection;
+        $canManage = $user->hasTeamPermission($team, TeamPermission::ManageWhatsapp);
+        $metaConfigured = $connection?->hasCloudCredentials() ?? false;
+
+        // The team can still send without its own number when a shared instance
+        // number is configured (whatsapp-cloud.default) — the resolver falls back
+        // to it. Mirror that here so the UI reflects the real state.
+        $sharedConfigured = ArrayCredentials::fromArray((array) config('whatsapp-cloud.default')) !== null;
+
+        return [
+            'apiEnabled' => $team->usesWhatsappApi(),
+            'connected' => $connection?->isConnected() ?? false,
+            'canManage' => $canManage,
+            // Painel de templates da WABA compartilhada — restrito pelo gate
+            // manage-whatsapp-templates (allowlist), não pela permissão do time.
+            'canManageTemplates' => $user->can('manage-whatsapp-templates'),
+            'termsAccepted' => $canManage && WhatsappTerms::accepted($user, $team),
+            // Estado do número oficial da Meta (Cloud API).
+            'metaConfigured' => $metaConfigured,
+            // Sem número próprio, mas enviando pelo número compartilhado do Coordena.
+            'usesSharedNumber' => ! $metaConfigured && $sharedConfigured,
+            'verifiedName' => $connection?->verified_name,
+            'qualityRating' => $connection?->quality_rating,
+            'messagingLimit' => $connection?->messaging_limit,
         ];
     }
 }
