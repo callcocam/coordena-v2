@@ -1,0 +1,140 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+|--------------------------------------------------------------------------
+| app.settings.* — perfil, segurança, aparência, 2FA e passkeys
+|--------------------------------------------------------------------------
+*/
+
+return [
+    'index' => [
+        'title' => 'Configurações',
+        'description' => 'Gerencie seu perfil e as configurações da conta',
+    ],
+    'nav' => [
+        'profile' => 'Perfil',
+        'security' => 'Segurança',
+        'teams' => 'Equipes',
+        'appearance' => 'Aparência',
+    ],
+    'profile' => [
+        'meta_title' => 'Configurações de perfil',
+        'breadcrumb' => 'Configurações de perfil',
+        'sr_title' => 'Configurações de perfil',
+        'heading' => 'Perfil',
+        'heading_desc' => 'Atualize seu nome e endereço de e-mail',
+        'name' => 'Nome',
+        'name_placeholder' => 'Nome completo',
+        'email' => 'Endereço de e-mail',
+        'email_placeholder' => 'Endereço de e-mail',
+        'email_unverified' => 'Seu endereço de e-mail não está verificado.',
+        'resend_verification' => 'Clique aqui para reenviar o e-mail de verificação.',
+        'verification_sent' => 'Um novo link de verificação foi enviado para o seu endereço de e-mail.',
+        'save' => 'Salvar',
+    ],
+    'security' => [
+        'meta_title' => 'Configurações de segurança',
+        'breadcrumb' => 'Configurações de segurança',
+        'sr_title' => 'Configurações de segurança',
+        'password' => [
+            'heading' => 'Atualizar senha',
+            'heading_desc' => 'Garanta que sua conta esteja usando uma senha longa e aleatória para se manter segura',
+            'current' => 'Senha atual',
+            'current_placeholder' => 'Senha atual',
+            'new' => 'Nova senha',
+            'new_placeholder' => 'Nova senha',
+            'confirm' => 'Confirme a senha',
+            'confirm_placeholder' => 'Confirme a senha',
+            'save' => 'Salvar',
+        ],
+    ],
+    'appearance' => [
+        'meta_title' => 'Configurações de aparência',
+        'breadcrumb' => 'Configurações de aparência',
+        'sr_title' => 'Configurações de aparência',
+        'heading' => 'Configurações de aparência',
+        'heading_desc' => 'Atualize as configurações de aparência da sua conta',
+        'tabs' => [
+            'light' => 'Claro',
+            'dark' => 'Escuro',
+            'system' => 'Sistema',
+        ],
+    ],
+    'delete_account' => [
+        'heading' => 'Excluir conta',
+        'heading_desc' => 'Exclua sua conta e todos os seus recursos',
+        'warning' => 'Atenção',
+        'warning_desc' => 'Prossiga com cuidado, esta ação não pode ser desfeita.',
+        'button' => 'Excluir conta',
+        'dialog_title' => 'Tem certeza de que deseja excluir sua conta?',
+        'dialog_description' => 'Depois que sua conta for excluída, todos os seus recursos e dados também serão excluídos permanentemente. Digite sua senha para confirmar que deseja excluir permanentemente sua conta.',
+        'password' => 'Senha',
+        'password_placeholder' => 'Senha',
+        'cancel' => 'Cancelar',
+        'confirm' => 'Excluir conta',
+    ],
+    'two_factor' => [
+        'heading' => 'Autenticação em dois fatores',
+        'heading_desc' => 'Gerencie as configurações da autenticação em dois fatores',
+        'disabled_description' => 'Ao ativar a autenticação em dois fatores, você será solicitado a informar um pin seguro durante o login. Esse pin pode ser obtido em um aplicativo compatível com TOTP no seu celular.',
+        'continue_setup' => 'Continuar configuração',
+        'enable' => 'Ativar 2FA',
+        'enabled_description' => 'Você será solicitado a informar um pin seguro e aleatório durante o login, que pode ser obtido no aplicativo compatível com TOTP no seu celular.',
+        'disable' => 'Desativar 2FA',
+        'setup' => [
+            'enabled_title' => 'Autenticação em dois fatores ativada',
+            'enabled_description' => 'A autenticação em dois fatores agora está ativada. Escaneie o QR code ou insira a chave de configuração no seu aplicativo autenticador.',
+            'close' => 'Fechar',
+            'verify_title' => 'Verificar código de autenticação',
+            'verify_description' => 'Digite o código de 6 dígitos do seu aplicativo autenticador',
+            'continue' => 'Continuar',
+            'enable_title' => 'Ativar autenticação em dois fatores',
+            'enable_description' => 'Para concluir a ativação da autenticação em dois fatores, escaneie o QR code ou insira a chave de configuração no seu aplicativo autenticador',
+            'manual_entry' => 'ou insira o código manualmente',
+            'back' => 'Voltar',
+            'confirm' => 'Confirmar',
+        ],
+        'recovery' => [
+            'title' => 'Códigos de recuperação 2FA',
+            'description' => 'Os códigos de recuperação permitem recuperar o acesso caso você perca seu dispositivo 2FA. Guarde-os em um gerenciador de senhas seguro.',
+            'show_codes' => 'Mostrar códigos de recuperação',
+            'hide_codes' => 'Ocultar códigos de recuperação',
+            'regenerate' => 'Regenerar códigos',
+            'note_before' => 'Cada código de recuperação pode ser usado uma vez para acessar sua conta e será removido após o uso. Se precisar de mais, clique em',
+            'note_after' => 'acima.',
+        ],
+    ],
+    'passkeys' => [
+        'heading' => 'Passkeys',
+        'heading_desc' => 'Gerencie suas passkeys para login sem senha',
+        'empty_title' => 'Nenhuma passkey ainda',
+        'empty_description' => 'Adicione uma passkey para entrar sem senha',
+        'item' => [
+            'added' => 'Adicionada :time',
+            'last_used' => 'Último uso :time',
+            'remove' => 'Remover',
+            'remove_title' => 'Remover passkey',
+            'remove_description' => 'Tem certeza de que deseja remover a passkey ":name"? Você não poderá mais usá-la para entrar.',
+            'cancel' => 'Cancelar',
+            'removing' => 'Removendo…',
+            'remove_button' => 'Remover passkey',
+        ],
+        'register' => [
+            'not_supported' => 'Passkeys não são suportadas neste navegador.',
+            'add' => 'Adicionar passkey',
+            'name' => 'Nome da passkey',
+            'name_placeholder' => 'ex.: MacBook Pro, iPhone',
+            'name_help' => 'Um nome ajuda você a identificar esta passkey depois.',
+            'registering' => 'Registrando…',
+            'register_button' => 'Registrar passkey',
+            'cancel' => 'Cancelar',
+        ],
+        'verify' => [
+            'label' => 'Entrar com passkey',
+            'loading_label' => 'Autenticando…',
+            'separator' => 'Ou continue com o e-mail',
+        ],
+    ],
+];
