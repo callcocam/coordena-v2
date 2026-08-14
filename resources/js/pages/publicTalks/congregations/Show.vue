@@ -5,6 +5,7 @@ import { computed, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import OutlinePicker from '@/components/OutlinePicker.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,7 +26,8 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useT } from '@/composables/useT';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { update as updateCongregation } from '@/routes/acervo/congregations';
+import { index as congregationsIndex, update as updateCongregation } from '@/routes/acervo/congregations';
+import { store as storeIntro } from '@/routes/acervo/congregations/intro';
 import {
     destroy as destroySpeaker,
     store as storeSpeaker,
@@ -33,6 +35,7 @@ import {
 } from '@/routes/acervo/speakers';
 import type {
     CongregationDetail,
+    CongregationIntroSummary,
     OutlineOption,
     SpeakerDetail,
     SpeakerRole,
@@ -44,6 +47,7 @@ type Props = {
     speakers: SpeakerDetail[];
     outlines: OutlineOption[];
     canManage: boolean;
+    intro: CongregationIntroSummary | null;
 };
 
 const props = defineProps<Props>();
@@ -210,6 +214,47 @@ const removeSpeaker = (speaker: SpeakerDetail) => {
 const roleLabel = (role: SpeakerRole): string =>
     t(`app.public_talks.speakers.roles.${role}`);
 
+/* Congregation intro (apresentação + opt-in) */
+const introSending = ref(false);
+
+const showIntroCard = computed(
+    () =>
+        props.canManage &&
+        !props.congregation.is_home &&
+        props.congregation.exchange_opt === 'unknown',
+);
+
+const canSendIntro = computed(
+    () =>
+        props.intro === null ||
+        ['failed', 'declined', 'expired'].includes(props.intro.status),
+);
+
+const introStatusLabel = computed(() =>
+    props.intro === null
+        ? null
+        : t(`app.public_talks.intro.statuses.${props.intro.status}`),
+);
+
+const sendIntro = () => {
+    if (introSending.value) {
+        return;
+    }
+
+    introSending.value = true;
+
+    router.post(
+        storeIntro([teamSlug.value, props.congregation.id]).url,
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                introSending.value = false;
+            },
+        },
+    );
+};
+
 const outlineLabel = (speaker: SpeakerDetail): string => {
     const numbers = props.outlines
         .filter((outline) => speaker.outline_ids.includes(outline.id))
@@ -222,10 +267,8 @@ const outlineLabel = (speaker: SpeakerDetail): string => {
 <template>
     <Head :title="props.congregation.name" />
 
-    <div class="flex flex-col space-y-6 p-4 sm:p-6">
-        <div
-            class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
-        >
+    <PageContainer :back-href="congregationsIndex(teamSlug)">
+        <template #heading>
             <div>
                 <div class="flex items-center gap-2">
                     <h1 class="text-xl font-semibold">
@@ -262,9 +305,10 @@ const outlineLabel = (speaker: SpeakerDetail): string => {
                     </template>
                 </p>
             </div>
+        </template>
 
+        <template v-if="props.canManage" #actions>
             <Button
-                v-if="props.canManage"
                 variant="outline"
                 data-test="edit-congregation"
                 @click="openEdit"
@@ -272,7 +316,7 @@ const outlineLabel = (speaker: SpeakerDetail): string => {
                 <Pencil class="size-4" />
                 {{ t('app.public_talks.congregations.edit') }}
             </Button>
-        </div>
+        </template>
 
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="rounded-lg border p-4">
@@ -295,6 +339,67 @@ const outlineLabel = (speaker: SpeakerDetail): string => {
                 </p>
                 <p class="text-sm text-muted-foreground">
                     {{ props.congregation.secretary_phone || '—' }}
+                </p>
+            </div>
+        </div>
+
+        <div
+            v-if="showIntroCard || props.intro !== null"
+            data-test="intro-card"
+            class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4"
+        >
+            <div>
+                <p class="text-sm font-medium">
+                    {{ t('app.public_talks.intro.title') }}
+                </p>
+                <p
+                    v-if="props.intro === null"
+                    class="mt-1 text-sm text-muted-foreground"
+                >
+                    {{ t('app.public_talks.intro.opt.unknown') }}
+                </p>
+                <template v-else>
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        <Badge variant="outline">{{ introStatusLabel }}</Badge>
+                    </p>
+                    <p
+                        v-if="props.intro.sent_at"
+                        class="mt-1 text-sm text-muted-foreground"
+                    >
+                        {{
+                            t('app.public_talks.intro.sent_at', {
+                                date: props.intro.sent_at,
+                            })
+                        }}
+                        <template v-if="props.intro.responded_at">
+                            ·
+                            {{
+                                t('app.public_talks.intro.responded_at', {
+                                    date: props.intro.responded_at,
+                                })
+                            }}
+                        </template>
+                    </p>
+                </template>
+            </div>
+            <div v-if="showIntroCard">
+                <Button
+                    v-if="canSendIntro && props.congregation.contact_phone"
+                    data-test="send-intro"
+                    :disabled="introSending"
+                    @click="sendIntro"
+                >
+                    {{
+                        props.intro === null
+                            ? t('app.public_talks.intro.send')
+                            : t('app.public_talks.intro.resend')
+                    }}
+                </Button>
+                <p
+                    v-else-if="canSendIntro"
+                    class="text-sm text-muted-foreground"
+                >
+                    {{ t('app.public_talks.intro.no_whatsapp') }}
                 </p>
             </div>
         </div>
@@ -368,7 +473,7 @@ const outlineLabel = (speaker: SpeakerDetail): string => {
                 </div>
             </div>
         </div>
-    </div>
+    </PageContainer>
 
     <!-- Edit congregation -->
     <Dialog v-model:open="editOpen">

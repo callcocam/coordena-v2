@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
- * Convite mensal de permuta de oradores de um time.
+ * Convite mensal de troca de oradores de um time.
  *
  * @property string $id
  * @property string $team_id

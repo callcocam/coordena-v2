@@ -50,6 +50,7 @@ class SendSpeakerAssignmentNotification implements ShouldQueue
         TalkAssignment $assignment,
         SpeakerNotificationKind $kind,
         ?User $sentBy = null,
+        ?int $delaySeconds = null,
     ): TalkAssignmentNotification {
         /** @var TalkAssignmentNotification $notification */
         $notification = $assignment->notifications()->create([
@@ -59,7 +60,7 @@ class SendSpeakerAssignmentNotification implements ShouldQueue
             'sent_by_id' => $sentBy?->id,
         ]);
 
-        self::dispatch($notification);
+        self::dispatch($notification)->delay($delaySeconds);
 
         return $notification;
     }

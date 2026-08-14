@@ -28,6 +28,7 @@ type Props = {
     token: string;
     month: string;
     homeCongregation: string | null;
+    meetingTime: string | null;
     invitedCongregation: string;
     closed: boolean;
     openWeeks: { date: string }[];
@@ -60,12 +61,15 @@ const monthLabel = (): string => {
     });
 };
 
-const weekLabel = (date: string): string =>
-    new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', {
+const weekLabel = (date: string): string => {
+    const label = new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', {
         weekday: 'short',
         day: '2-digit',
         month: '2-digit',
     });
+
+    return props.meetingTime !== null ? `${label} · ${props.meetingTime}` : label;
+};
 
 const addRow = () => {
     form.offers.push(emptyRow());

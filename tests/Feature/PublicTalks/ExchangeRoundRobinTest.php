@@ -27,16 +27,23 @@ function roundRobinInvite(): array
     return [$user, $team->fresh(), $invite];
 }
 
-test('suggests only opted-in congregations with contact, excluding home', function () {
+test('suggests opted-in congregations with contact, keeping unknown in the pending intro list', function () {
     [$user, $team, $invite] = roundRobinInvite();
 
-    $eligible = Congregation::factory()->optedIn()->create([
+    $optedIn = Congregation::factory()->optedIn()->create([
         'owner_user_id' => $user->id,
+        'name' => 'Congregação Alfa',
         'contact_phone' => '51999990000',
+    ]);
+    $unknownOpt = Congregation::factory()->create([
+        'owner_user_id' => $user->id,
+        'name' => 'Congregação Beta',
+        'contact_phone' => '51999990001',
     ]);
     Congregation::factory()->create([
         'owner_user_id' => $user->id,
-        'contact_phone' => '51999990001',
+        'exchange_opt' => ExchangeOpt::OptedOut,
+        'contact_phone' => '51999990003',
     ]);
     Congregation::factory()->optedIn()->create([
         'owner_user_id' => $user->id,
@@ -50,9 +57,10 @@ test('suggests only opted-in congregations with contact, excluding home', functi
         'contact_phone' => '51999990002',
     ])->save();
 
-    $candidates = app(ExchangeRoundRobin::class)->candidatesFor($invite);
+    $roundRobin = app(ExchangeRoundRobin::class);
 
-    expect($candidates->pluck('id')->all())->toBe([$eligible->id]);
+    expect($roundRobin->candidatesFor($invite)->pluck('id')->all())->toBe([$optedIn->id])
+        ->and($roundRobin->pendingIntroFor($invite)->pluck('id')->all())->toContain($unknownOpt->id);
 });
 
 test('skips congregations with a live send on the invite', function () {

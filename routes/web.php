@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PublicTalks\CongregationController;
+use App\Http\Controllers\PublicTalks\CongregationIntroController;
 use App\Http\Controllers\PublicTalks\CoordinatorController;
 use App\Http\Controllers\PublicTalks\ExchangeController;
 use App\Http\Controllers\PublicTalks\ExchangeOfferController;
 use App\Http\Controllers\PublicTalks\ExchangePortalController;
 use App\Http\Controllers\PublicTalks\ExchangeSendController;
+use App\Http\Controllers\PublicTalks\IntroPortalController;
 use App\Http\Controllers\PublicTalks\ScheduleController;
 use App\Http\Controllers\PublicTalks\SetupController;
 use App\Http\Controllers\PublicTalks\SpeakerController;
@@ -21,6 +23,7 @@ Route::inertia('/privacidade', 'legal/Privacy')->name('legal.privacy');
 Route::middleware('throttle:20,1')->group(function () {
     Route::get('permuta/{portal_token}', [ExchangePortalController::class, 'show'])->name('exchange.portal');
     Route::post('permuta/{portal_token}', [ExchangePortalController::class, 'store'])->name('exchange.portal.submit');
+    Route::get('apresentacao/{portal_token}', [IntroPortalController::class, 'show'])->name('intro.portal');
 });
 
 Route::prefix('{current_team}')
@@ -45,6 +48,7 @@ Route::prefix('{current_team}')
         Route::get('acervo/{congregation}', [CongregationController::class, 'show'])->name('acervo.congregations.show');
         Route::put('acervo/{congregation}', [CongregationController::class, 'update'])->name('acervo.congregations.update');
         Route::delete('acervo/{congregation}', [CongregationController::class, 'destroy'])->name('acervo.congregations.destroy');
+        Route::post('acervo/{congregation}/apresentacao', [CongregationIntroController::class, 'store'])->name('acervo.congregations.intro.store');
 
         Route::get('discursos/permutas', [ExchangeController::class, 'index'])->name('public-talks.exchange.index');
         Route::post('discursos/permutas/envios', [ExchangeController::class, 'storeSend'])->name('public-talks.exchange.sends.store');

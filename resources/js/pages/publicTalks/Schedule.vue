@@ -2,9 +2,9 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { CalendarDays, Phone } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import OutlinePicker from '@/components/OutlinePicker.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -25,8 +25,13 @@ import {
 } from '@/components/ui/sheet';
 import { useT } from '@/composables/useT';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { dashboard } from '@/routes';
 import { schedule } from '@/routes/public-talks';
-import { update as updateSlot } from '@/routes/public-talks/schedule';
+import { index as exchangeIndex } from '@/routes/public-talks/exchange';
+import {
+    notify as notifySlot,
+    update as updateSlot,
+} from '@/routes/public-talks/schedule';
 import type {
     HomeCongregation,
     OutlineOption,
@@ -67,6 +72,29 @@ const dateLabel = (value: string): string =>
         locale.value.replace('_', '-'),
         { weekday: 'short', day: '2-digit', month: 'short' },
     );
+
+const shortDateLabel = (value: string): string =>
+    new Date(`${value}T12:00:00`).toLocaleDateString(
+        locale.value.replace('_', '-'),
+        { day: '2-digit', month: 'short' },
+    );
+
+const timeLabel = (value: string | null): string | null =>
+    value ? value.slice(0, 5) : null;
+
+/**
+ * Concrete meeting moment of the week: home/incoming use the home
+ * congregation's time; outgoing shows only the derived date.
+ */
+const meetingLabel = (week: ScheduleWeek): string => {
+    const day = dateLabel(week.date);
+    const time =
+        week.type === 'outgoing'
+            ? null
+            : timeLabel(props.homeCongregation.meeting_time);
+
+    return time ? `${day} · ${time}` : day;
+};
 
 const changeMonth = (value: unknown) => {
     if (typeof value !== 'string' || value === props.month) {
@@ -117,9 +145,8 @@ const openWeek = (week: ScheduleWeek) => {
 
 const selectedSpeaker = computed<ScheduleSpeaker | null>(
     () =>
-        props.speakers.find(
-            (speaker) => speaker.id === speakerId.value,
-        ) ?? null,
+        props.speakers.find((speaker) => speaker.id === speakerId.value) ??
+        null,
 );
 
 const isPrepared = (outline: OutlineOption): boolean =>
@@ -152,56 +179,89 @@ const submit = (clear = false) => {
         },
     );
 };
+
+const canNotify = computed(
+    () =>
+        activeWeek.value !== null &&
+        activeWeek.value.speaker !== null &&
+        activeWeek.value.outline !== null,
+);
+
+const notifySpeaker = () => {
+    if (!activeWeek.value) {
+        return;
+    }
+
+    router.post(
+        notifySlot([teamSlug.value, activeWeek.value.id]).url,
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => (processing.value = true),
+            onFinish: () => (processing.value = false),
+            onSuccess: () => (sheetOpen.value = false),
+        },
+    );
+};
+
+const goToExchange = () => {
+    router.get(exchangeIndex(teamSlug.value).url, { month: props.month });
+};
 </script>
 
 <template>
     <Head :title="t('app.public_talks.schedule.title')" />
 
-    <div class="flex flex-col space-y-6 p-4 sm:p-6">
-        <div
-            class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
-        >
-            <Heading
-                :title="t('app.public_talks.schedule.title')"
-                :description="
-                    t('app.public_talks.schedule.description', {
-                        name: props.homeCongregation.name,
+    <PageContainer
+        :title="t('app.public_talks.schedule.title')"
+        :description="
+            t('app.public_talks.schedule.description', {
+                name: props.homeCongregation.name,
+            })
+        "
+        :back-href="dashboard(teamSlug)"
+        width="5xl"
+    >
+        <template #actions>
+            <Button
+                v-if="props.canManage"
+                variant="outline"
+                data-test="invite-congregation"
+                @click="goToExchange"
+            >
+                {{ t('app.public_talks.schedule.invite_congregation') }}
+            </Button>
+
+            <Badge
+                v-if="props.pendingCount > 0"
+                variant="secondary"
+                data-test="pending-count"
+            >
+                {{
+                    t('app.public_talks.schedule.pending_badge', {
+                        count: props.pendingCount,
                     })
-                "
-            />
+                }}
+            </Badge>
 
-            <div class="flex items-center gap-3">
-                <Badge
-                    v-if="props.pendingCount > 0"
-                    variant="secondary"
-                    data-test="pending-count"
-                >
-                    {{
-                        t('app.public_talks.schedule.pending_badge', {
-                            count: props.pendingCount,
-                        })
-                    }}
-                </Badge>
-
-                <Select
-                    :model-value="props.month"
-                    @update:model-value="changeMonth"
-                >
-                    <SelectTrigger class="w-48" data-test="month-select">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem
-                            v-for="option in props.months"
-                            :key="option.value"
-                            :value="option.value"
-                        >
-                            {{ monthLabel(option.value) }}
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-        </div>
+            <Select
+                :model-value="props.month"
+                @update:model-value="changeMonth"
+            >
+                <SelectTrigger class="w-48" data-test="month-select">
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem
+                        v-for="option in props.months"
+                        :key="option.value"
+                        :value="option.value"
+                    >
+                        {{ monthLabel(option.value) }}
+                    </SelectItem>
+                </SelectContent>
+            </Select>
+        </template>
 
         <div
             v-if="props.weeks.length === 0"
@@ -230,8 +290,12 @@ const submit = (clear = false) => {
                             <CalendarDays
                                 class="size-4 shrink-0 text-muted-foreground"
                             />
-                            <span class="font-medium capitalize">
-                                {{ dateLabel(week.date) }}
+                            <span class="font-medium">
+                                {{
+                                    t('app.public_talks.schedule.week_of', {
+                                        date: shortDateLabel(week.week_start),
+                                    })
+                                }}
                             </span>
                             <Badge variant="outline">
                                 {{
@@ -240,6 +304,12 @@ const submit = (clear = false) => {
                                     )
                                 }}
                             </Badge>
+                        </div>
+
+                        <div
+                            class="mt-1 text-xs text-muted-foreground capitalize"
+                        >
+                            {{ meetingLabel(week) }}
                         </div>
 
                         <div class="mt-2 text-sm">
@@ -264,17 +334,31 @@ const submit = (clear = false) => {
                         </div>
                     </div>
 
-                    <Badge :variant="statusVariant(week.status)">
-                        {{
-                            t(
-                                `app.public_talks.schedule.statuses.${week.status}`,
-                            )
-                        }}
-                    </Badge>
+                    <div class="flex shrink-0 flex-col items-end gap-2">
+                        <Badge :variant="statusVariant(week.status)">
+                            {{
+                                t(
+                                    `app.public_talks.schedule.statuses.${week.status}`,
+                                )
+                            }}
+                        </Badge>
+
+                        <span
+                            v-if="week.editable"
+                            class="inline-flex h-8 items-center rounded-md border px-3 text-xs font-medium"
+                            data-test="week-action"
+                        >
+                            {{
+                                week.speaker
+                                    ? t('app.public_talks.schedule.edit_week')
+                                    : t('app.public_talks.schedule.edit_slot')
+                            }}
+                        </span>
+                    </div>
                 </div>
             </button>
         </div>
-    </div>
+    </PageContainer>
 
     <Sheet v-model:open="sheetOpen">
         <SheetContent side="bottom" class="mx-auto max-w-lg rounded-t-lg">
@@ -297,7 +381,10 @@ const submit = (clear = false) => {
                         t('app.public_talks.schedule.speaker_label')
                     }}</Label>
                     <Select v-model="speakerId">
-                        <SelectTrigger class="w-full" data-test="speaker-select">
+                        <SelectTrigger
+                            class="w-full"
+                            data-test="speaker-select"
+                        >
                             <SelectValue
                                 :placeholder="
                                     t(
@@ -356,7 +443,16 @@ const submit = (clear = false) => {
                 </div>
             </div>
 
-            <SheetFooter class="flex-row justify-end gap-2 px-4 pb-6">
+            <SheetFooter class="flex-row flex-wrap justify-end gap-2 px-4 pb-6">
+                <Button
+                    v-if="canNotify"
+                    variant="secondary"
+                    :disabled="processing"
+                    data-test="notify-speaker"
+                    @click="notifySpeaker"
+                >
+                    {{ t('app.public_talks.schedule.notify') }}
+                </Button>
                 <Button
                     v-if="activeWeek?.speaker"
                     variant="outline"

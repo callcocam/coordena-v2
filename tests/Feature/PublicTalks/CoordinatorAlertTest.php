@@ -59,14 +59,14 @@ test('alert uses a session text when the coordinator wrote within 24h', function
         ->withArgs(function (string $to, string $text) {
             expect($to)->toBe('5551999998888')
                 ->and($text)->toContain('*Carlos*')
-                ->and($text)->toContain('convite de permuta aceito');
+                ->and($text)->toContain('convite de troca aceito');
 
             return true;
         })
         ->andReturn(SendResult::sent('cloud', 'wamid.SESSION'));
     WhatsApp::shouldReceive('for')->andReturn($client);
 
-    app(CoordinatorAlert::class)->send($team, 'convite de permuta aceito pela outra congregação.');
+    app(CoordinatorAlert::class)->send($team, 'convite de troca aceito pela outra congregação.');
 });
 
 test('a failed recipient is logged and does not stop the others', function () {

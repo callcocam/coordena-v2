@@ -13,7 +13,8 @@ use Illuminate\Support\Carbon;
 /**
  * Rodízio de congregações parceiras para o convite mensal.
  *
- * Sugere a próxima candidata (opted_in, com contato, sem envio vivo neste
+ * Sugere a próxima candidata (somente congregações que aceitaram trocas —
+ * `opted_in` após a apresentação —, com contato, sem envio vivo neste
  * convite, menos recentemente convidada) — sugestão, não imposição: o
  * coordenador escolhe e envia manualmente.
  */
@@ -45,6 +46,7 @@ class ExchangeRoundRobin
             ->whereIn('status', [
                 ExchangeInviteSendStatus::Pending,
                 ExchangeInviteSendStatus::Sent,
+                ExchangeInviteSendStatus::Accepted,
                 ExchangeInviteSendStatus::Answered,
             ])
             ->pluck('congregation_id');
@@ -69,11 +71,41 @@ class ExchangeRoundRobin
     }
 
     /**
+     * Partners with contact info still waiting for the introduction opt-in
+     * (`unknown`) — shown by the exchange page so an empty rotation explains
+     * itself instead of looking broken.
+     *
+     * @return Collection<int, Congregation>
+     */
+    public function pendingIntroFor(ExchangeInvite $invite): Collection
+    {
+        $team = $invite->team;
+        $owner = $team->owner();
+
+        if ($owner === null) {
+            return new Collection;
+        }
+
+        return Congregation::query()
+            ->ownedBy($owner->id)
+            ->where('exchange_opt', ExchangeOpt::Unknown)
+            ->when($team->home_congregation_id !== null, fn ($query) => $query->whereKeyNot($team->home_congregation_id))
+            ->where(function ($query) {
+                $query->whereNotNull('contact_phone')
+                    ->orWhereNotNull('secretary_phone')
+                    ->orWhereNotNull('contact_email')
+                    ->orWhereNotNull('secretary_email');
+            })
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
      * When each congregation was last invited by this team, keyed by id.
      *
      * @return array<string, string>
      */
-    protected function lastInvitedAtByCongregation(ExchangeInvite $invite): array
+    public function lastInvitedAtByCongregation(ExchangeInvite $invite): array
     {
         return ExchangeInviteSend::query()
             ->whereHas('invite', fn ($query) => $query->where('team_id', $invite->team_id))

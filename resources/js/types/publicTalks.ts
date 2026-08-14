@@ -5,6 +5,7 @@
 export type ScheduleWeek = {
     id: string;
     date: string;
+    week_start: string;
     type: 'home' | 'incoming' | 'outgoing';
     status:
         | 'open'
@@ -74,6 +75,12 @@ export type CongregationDetail = {
     meeting_time: string | null;
     exchange_opt: 'opted_in' | 'opted_out' | 'unknown';
     is_home: boolean;
+};
+
+export type CongregationIntroSummary = {
+    status: 'pending' | 'sent' | 'failed' | 'accepted' | 'declined' | 'expired';
+    sent_at: string | null;
+    responded_at: string | null;
 };
 
 export type SpeakerDetail = {

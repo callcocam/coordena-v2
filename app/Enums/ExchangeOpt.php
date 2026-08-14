@@ -3,7 +3,7 @@
 namespace App\Enums;
 
 /**
- * Disposição da congregação parceira quanto a permutas.
+ * Disposição da congregação parceira quanto a trocas.
  */
 enum ExchangeOpt: string
 {

@@ -4,6 +4,7 @@ import { Plus, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +17,7 @@ import {
 } from '@/components/ui/select';
 import { useT } from '@/composables/useT';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { dashboard } from '@/routes';
 import {
     congregation as setupCongregation,
     coordinator as setupCoordinator,
@@ -116,7 +118,7 @@ const submitCoordinator = () => {
 <template>
     <Head :title="t('app.public_talks.setup.title')" />
 
-    <div class="mx-auto w-full max-w-xl space-y-6 p-4 sm:p-6">
+    <PageContainer width="xl" :back-href="dashboard(teamSlug)">
         <template v-if="props.step === 'congregation'">
             <Heading
                 title="app.public_talks.setup.congregation_title"
@@ -222,7 +224,11 @@ const submitCoordinator = () => {
 
             <Button
                 class="w-full"
-                :disabled="processing || (!congregationId && !name)"
+                :disabled="
+                    processing ||
+                    (!congregationId &&
+                        (!name || meetingWeekday === null || !meetingTime))
+                "
                 data-test="setup-congregation-submit"
                 @click="submitCongregation"
             >
@@ -297,5 +303,5 @@ const submitCoordinator = () => {
                 {{ t('app.public_talks.setup.finish') }}
             </Button>
         </template>
-    </div>
+    </PageContainer>
 </template>

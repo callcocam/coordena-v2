@@ -11,6 +11,7 @@ use App\Models\ExchangeOffer;
 use App\Models\TalkAssignment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -96,6 +97,14 @@ class ExchangeConfirmer
                 'offers' => __('app.public_talks.exchange.confirm.errors.unavailable', ['speaker' => $offer->speaker->name]),
             ]);
         }
+
+        if ($offer->direction === 'outgoing' && $offer->inviteSend->congregation->meeting_weekday === null) {
+            throw ValidationException::withMessages([
+                'offers' => __('app.public_talks.exchange.confirm.errors.partner_missing_schedule', [
+                    'congregation' => $offer->inviteSend->congregation->name,
+                ]),
+            ]);
+        }
     }
 
     /**
@@ -107,7 +116,7 @@ class ExchangeConfirmer
     {
         $week = TalkAssignment::query()
             ->where('team_id', $send->invite->team_id)
-            ->whereDate('date', $offer->target_date)
+            ->whereDate('week_start', $offer->target_date->copy()->startOfWeek(Carbon::MONDAY))
             ->whereIn('type', [TalkAssignmentType::Home, TalkAssignmentType::Incoming])
             ->first();
 
@@ -134,9 +143,13 @@ class ExchangeConfirmer
      */
     protected function bookOutgoing(ExchangeOffer $offer, ExchangeInviteSend $send, ?User $user): void
     {
+        $horizon = app(ScheduleHorizon::class);
+        $weekStart = $offer->target_date->copy()->startOfWeek(Carbon::MONDAY);
+        $date = $horizon->meetingDateFor($weekStart, $send->congregation->meeting_weekday);
+
         TalkAssignment::query()->updateOrCreate([
             'team_id' => $send->invite->team_id,
-            'date' => $offer->target_date->toDateString(),
+            'date' => $date->toDateString(),
             'type' => TalkAssignmentType::Outgoing,
             'speaker_id' => $offer->speaker_id,
         ], [

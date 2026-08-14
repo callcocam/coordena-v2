@@ -70,6 +70,33 @@ services:
     networks:
       - internal
 
+  # Scheduler do Laravel: roda `schedule:work` para os comandos agendados em
+  # routes/console.php (horizonte de convites, lembretes de orador, reengates).
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+
+    user: "1000:1000"
+
+    command: php artisan schedule:work
+
+    restart: unless-stopped
+
+    volumes:
+      - ./:/var/www
+
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+
+    working_dir: /var/www
+
+    networks:
+      - internal
+
   postgres:
     image: postgres:17
 

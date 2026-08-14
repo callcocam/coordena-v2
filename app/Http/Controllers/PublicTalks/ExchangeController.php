@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\PublicTalks;
 
 use App\Enums\ExchangeInviteSendStatus;
+use App\Enums\ExchangeOpt;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicTalks\StoreExchangeSendRequest;
 use App\Jobs\SendExchangeInvite;
@@ -50,7 +51,9 @@ class ExchangeController extends Controller
         $invite = $this->manager->forMonth($team, $month, $request->user());
 
         $candidates = $this->roundRobin->candidatesFor($invite);
-        $selected = $this->selectedCongregation($request, $candidates->pluck('id')->all());
+        $suggestion = $candidates->first();
+        $selected = $this->selectedCongregation($request, $candidates->pluck('id')->all()) ?? $suggestion;
+        $lastInvitedAt = $this->roundRobin->lastInvitedAtByCongregation($invite);
 
         return Inertia::render('publicTalks/Exchange', [
             'month' => $month->format('Y-m'),
@@ -64,8 +67,16 @@ class ExchangeController extends Controller
                     'id' => $week->id,
                     'date' => $week->date->toDateString(),
                 ])->all(),
-            'suggestionId' => $this->roundRobin->nextFor($invite)?->id,
+            'suggestionId' => $suggestion?->id,
             'candidates' => $candidates
+                ->map(fn (Congregation $congregation): array => [
+                    'id' => $congregation->id,
+                    'name' => $congregation->name,
+                    'city' => $congregation->city,
+                    'has_whatsapp' => Phone::normalize($congregation->contact_phone) !== null,
+                    'last_invited_at' => $lastInvitedAt[$congregation->id] ?? null,
+                ])->all(),
+            'pendingIntro' => $this->roundRobin->pendingIntroFor($invite)
                 ->map(fn (Congregation $congregation): array => [
                     'id' => $congregation->id,
                     'name' => $congregation->name,
@@ -94,6 +105,13 @@ class ExchangeController extends Controller
         Gate::authorize('send', $invite);
 
         $congregation = Congregation::query()->findOrFail($request->string('congregation_id')->value());
+
+        if ($congregation->exchange_opt !== ExchangeOpt::OptedIn) {
+            throw ValidationException::withMessages([
+                'congregation_id' => __('A congregação :name ainda não aceitou trocas: envie a apresentação primeiro, no cadastro dela.', ['name' => $congregation->name]),
+            ]);
+        }
+
         $channel = $request->string('channel')->value();
 
         if ($channel === 'whatsapp') {
@@ -205,15 +223,14 @@ class ExchangeController extends Controller
     /**
      * The months covered by the schedule horizon.
      *
-     * @return list<array{value: string}>
+     * @return list<string>
      */
     protected function horizonMonths(): array
     {
         $start = Carbon::today()->startOfMonth();
 
         return collect(range(0, ScheduleHorizon::MONTHS_AHEAD - 1))
-            ->map(fn (int $offset): array => [
-                'value' => $start->copy()->addMonths($offset)->format('Y-m'),
-            ])->all();
+            ->map(fn (int $offset): string => $start->copy()->addMonths($offset)->format('Y-m'))
+            ->all();
     }
 }

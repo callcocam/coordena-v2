@@ -5,6 +5,7 @@ namespace App\Http\Controllers\PublicTalks;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicTalks\SaveCongregationRequest;
 use App\Models\Congregation;
+use App\Models\CongregationIntro;
 use App\Models\PublicTalkOutline;
 use App\Models\Speaker;
 use App\Models\Team;
@@ -91,6 +92,12 @@ class CongregationController extends Controller
             $query->with('outlines:id,number,title')->orderBy('name');
         }]);
 
+        $intro = CongregationIntro::query()
+            ->where('team_id', $team->id)
+            ->where('congregation_id', $congregation->id)
+            ->latest('id')
+            ->first();
+
         return Inertia::render('publicTalks/congregations/Show', [
             'congregation' => [
                 'id' => $congregation->id,
@@ -131,6 +138,11 @@ class CongregationController extends Controller
                 ])
                 ->all(),
             'canManage' => Gate::allows('update', $congregation),
+            'intro' => $intro === null ? null : [
+                'status' => $intro->status->value,
+                'sent_at' => $intro->sent_at?->toDateTimeString(),
+                'responded_at' => $intro->responded_at?->toDateTimeString(),
+            ],
         ]);
     }
 

@@ -216,7 +216,19 @@ return [
             'name' => 'coordena_exchange_invite',
             'language' => 'pt_BR',
             'category' => 'utility',
-            'params' => ['contact', 'congregation', 'month', 'link'],
+            'params' => ['contact', 'congregation', 'month', 'count'],
+        ],
+        'exchange_help' => [
+            'name' => 'coordena_exchange_help',
+            'language' => 'pt_BR',
+            'category' => 'utility',
+            'params' => ['contact', 'congregation', 'month'],
+        ],
+        'intro' => [
+            'name' => 'coordena_intro',
+            'language' => 'pt_BR',
+            'category' => 'utility',
+            'params' => ['coordinator', 'congregation', 'link'],
         ],
         'coordinator_alert' => [
             'name' => 'coordena_coordinator_alert',

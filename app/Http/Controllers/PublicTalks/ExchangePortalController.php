@@ -12,6 +12,7 @@ use App\Models\PublicTalkOutline;
 use App\Models\Speaker;
 use App\Models\TalkAssignment;
 use App\Services\PublicTalks\ExchangeInviteManager;
+use App\Services\PublicTalks\SpeakerAvailability;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,10 @@ use Inertia\Response;
 
 class ExchangePortalController extends Controller
 {
-    public function __construct(protected ExchangeInviteManager $manager) {}
+    public function __construct(
+        protected ExchangeInviteManager $manager,
+        protected SpeakerAvailability $availability,
+    ) {}
 
     /**
      * Public portal for the invited congregation, keyed by portal token.
@@ -36,24 +40,24 @@ class ExchangePortalController extends Controller
             'token' => $token,
             'month' => $invite->month->format('Y-m'),
             'homeCongregation' => $home?->name,
+            'meetingTime' => $home?->meeting_time !== null
+                ? substr($home->meeting_time, 0, 5)
+                : null,
             'invitedCongregation' => $send->congregation->name,
             'closed' => $this->isClosed($send),
             'openWeeks' => $this->manager->openWeeks($invite)
                 ->map(fn (TalkAssignment $week): array => [
                     'date' => $week->date->toDateString(),
                 ])->all(),
-            'homeSpeakers' => $home === null ? [] : Speaker::query()
-                ->where('congregation_id', $home->id)
-                ->active()
-                ->with('outlines')
-                ->orderBy('name')
-                ->get()
-                ->map(fn (Speaker $speaker): array => [
-                    'name' => $speaker->name,
-                    'outlines' => $speaker->outlines
-                        ->map(fn (PublicTalkOutline $outline): string => sprintf('%d — %s', $outline->number, $outline->title))
-                        ->all(),
-                ])->all(),
+            'homeSpeakers' => $home === null || ! $this->exposesSpeakers($send)
+                ? []
+                : $this->availability->availableFor($home, $invite->month)
+                    ->map(fn (Speaker $speaker): array => [
+                        'name' => $speaker->name,
+                        'outlines' => $speaker->outlines
+                            ->map(fn (PublicTalkOutline $outline): string => sprintf('%d — %s', $outline->number, $outline->title))
+                            ->all(),
+                    ])->values()->all(),
         ]);
     }
 
@@ -109,7 +113,7 @@ class ExchangePortalController extends Controller
                 }
             }
 
-            if (in_array($send->status, [ExchangeInviteSendStatus::Pending, ExchangeInviteSendStatus::Sent], true)) {
+            if (in_array($send->status, [ExchangeInviteSendStatus::Pending, ExchangeInviteSendStatus::Sent, ExchangeInviteSendStatus::Accepted], true)) {
                 $send->forceFill([
                     'status' => ExchangeInviteSendStatus::Answered,
                     'answered_at' => now(),
@@ -118,6 +122,17 @@ class ExchangePortalController extends Controller
         });
 
         return back()->with('portal_submitted', true);
+    }
+
+    /**
+     * Melhoria 3 exposure gate: WhatsApp invites only reveal our speakers
+     * after the congregation tapped "accept" (never in the cold template).
+     * Manual sends keep the old behavior — the coordinator composed the text
+     * and already chose what to share.
+     */
+    protected function exposesSpeakers(ExchangeInviteSend $send): bool
+    {
+        return $send->channel !== 'whatsapp' || $send->accepted_at !== null;
     }
 
     /**

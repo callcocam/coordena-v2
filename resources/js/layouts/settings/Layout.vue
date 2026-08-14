@@ -37,7 +37,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <div class="px-4 py-6">
+    <div class="mx-auto w-full max-w-5xl px-4 py-6">
         <Heading
             title="app.settings.index.title"
             description="app.settings.index.description"

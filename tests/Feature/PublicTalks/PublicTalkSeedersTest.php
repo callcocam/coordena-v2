@@ -5,6 +5,7 @@ use App\Models\PublicTalkOutline;
 use App\Models\Speaker;
 use App\Models\Team;
 use App\Models\User;
+use Carbon\Carbon;
 use Database\Seeders\CongregationSeeder;
 use Database\Seeders\PublicTalkDemoSeeder;
 use Database\Seeders\PublicTalkOutlineSeeder;
@@ -31,6 +32,11 @@ test('congregation seeder is idempotent', function () {
     $count = Congregation::query()->count();
 
     expect($count)->toBeGreaterThan(0);
+
+    Congregation::query()->each(function (Congregation $congregation) {
+        expect($congregation->meeting_weekday)->toBeIn([Carbon::SATURDAY, Carbon::SUNDAY])
+            ->and(substr($congregation->meeting_time, 0, 5))->toBeIn(['18:00', '18:30', '19:00', '19:30', '20:00']);
+    });
 
     $this->seed(CongregationSeeder::class);
 

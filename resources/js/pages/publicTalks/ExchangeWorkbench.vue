@@ -2,8 +2,8 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { Check, Copy, Plus, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select';
 import { useT } from '@/composables/useT';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { index as exchangeIndex } from '@/routes/public-talks/exchange';
 import {
     destroy as destroyOffer,
     store as storeOffer,
@@ -189,35 +190,33 @@ const toggleOutline = (outlineId: string) => {
 <template>
     <Head :title="t('app.public_talks.exchange.workbench.title', { congregation: props.send.congregation.name })" />
 
-    <div class="flex flex-1 flex-col gap-6 p-4">
-        <div class="flex flex-wrap items-end justify-between gap-4">
-            <Heading
-                :title="t('app.public_talks.exchange.workbench.title', { congregation: props.send.congregation.name })"
-                :description="t('app.public_talks.exchange.workbench.description')"
-            />
+    <PageContainer
+        :title="t('app.public_talks.exchange.workbench.title', { congregation: props.send.congregation.name })"
+        :description="t('app.public_talks.exchange.workbench.description')"
+        :back-href="exchangeIndex(teamSlug)"
+        width="5xl"
+    >
+        <template #actions>
+            <Badge variant="secondary">
+                {{ t(`app.public_talks.exchange.send_statuses.${props.send.status}`) }}
+            </Badge>
 
-            <div class="flex items-center gap-2">
-                <Badge variant="secondary">
-                    {{ t(`app.public_talks.exchange.send_statuses.${props.send.status}`) }}
-                </Badge>
+            <Button variant="outline" size="sm" data-test="copy-portal-link" @click="copyPortalLink">
+                <Check v-if="copied" class="size-4" />
+                <Copy v-else class="size-4" />
+                {{ t('app.public_talks.exchange.portal_link') }}
+            </Button>
 
-                <Button variant="outline" size="sm" data-test="copy-portal-link" @click="copyPortalLink">
-                    <Check v-if="copied" class="size-4" />
-                    <Copy v-else class="size-4" />
-                    {{ t('app.public_talks.exchange.portal_link') }}
-                </Button>
-
-                <Button
-                    v-if="props.canManage"
-                    variant="destructive"
-                    size="sm"
-                    data-test="mark-declined"
-                    @click="markDeclined"
-                >
-                    {{ t('app.public_talks.exchange.mark_declined') }}
-                </Button>
-            </div>
-        </div>
+            <Button
+                v-if="props.canManage"
+                variant="destructive"
+                size="sm"
+                data-test="mark-declined"
+                @click="markDeclined"
+            >
+                {{ t('app.public_talks.exchange.mark_declined') }}
+            </Button>
+        </template>
 
         <div class="grid gap-6 lg:grid-cols-2">
             <div class="flex flex-col gap-6">
@@ -440,5 +439,5 @@ const toggleOutline = (outlineId: string) => {
                 </div>
             </div>
         </div>
-    </div>
+    </PageContainer>
 </template>

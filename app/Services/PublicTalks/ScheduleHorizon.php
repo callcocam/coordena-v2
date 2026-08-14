@@ -6,47 +6,53 @@ use App\Enums\TalkAssignmentStatus;
 use App\Enums\TalkAssignmentType;
 use App\Models\TalkAssignment;
 use App\Models\Team;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
 /**
  * Mantém a programação "home" do time sempre com 3 meses de horizonte.
  *
- * Idempotente: pode rodar quantas vezes for preciso (manual ou agendado);
- * só cria os fins de semana que ainda não existem. Conforme o tempo passa,
- * novas execuções criam o mês que entra no horizonte.
+ * Idempotente POR SEMANA (segunda-feira ISO como chave): cada semana do
+ * horizonte tem no máximo 1 slot home|incoming, e a data concreta da reunião
+ * é derivada do `meeting_weekday` da congregação-casa. Se o dia/horário da
+ * casa mudar, slots `open` futuros têm a data recalculada; slots já
+ * preenchidos não mudam sozinhos.
  */
 class ScheduleHorizon
 {
     public const MONTHS_AHEAD = 3;
 
     /**
-     * Ensure open home assignments exist for every upcoming weekend within
+     * Ensure one open home assignment exists for every upcoming week within
      * the horizon. Returns how many assignments were created.
      */
     public function ensure(Team $team): int
     {
-        $weekday = $team->homeCongregation?->meeting_weekday ?? Carbon::SATURDAY;
+        $weekday = $this->homeWeekday($team);
         $today = Carbon::today();
+        $horizonEnd = $today->copy()->startOfMonth()->addMonths(self::MONTHS_AHEAD)->subDay();
         $created = 0;
 
-        for ($offset = 0; $offset < self::MONTHS_AHEAD; $offset++) {
-            $month = $today->copy()->startOfMonth()->addMonths($offset);
+        $this->recalculateOpenDates($team, $weekday);
 
-            foreach ($this->datesFor($month, $weekday) as $date) {
-                if ($date->lt($today)) {
-                    continue;
-                }
+        $weekStart = $today->copy()->startOfWeek(Carbon::MONDAY);
 
-                $exists = TalkAssignment::query()
-                    ->where('team_id', $team->id)
-                    ->whereDate('date', $date)
-                    ->whereIn('type', [TalkAssignmentType::Home, TalkAssignmentType::Incoming])
-                    ->exists();
+        while ($weekStart->lte($horizonEnd)) {
+            $date = $this->meetingDateFor($weekStart, $weekday);
 
-                if ($exists) {
-                    continue;
-                }
+            if ($date->lt($today) || $date->gt($horizonEnd)) {
+                $weekStart = $weekStart->copy()->addWeek();
 
+                continue;
+            }
+
+            $exists = TalkAssignment::query()
+                ->where('team_id', $team->id)
+                ->whereDate('week_start', $weekStart)
+                ->whereIn('type', [TalkAssignmentType::Home, TalkAssignmentType::Incoming])
+                ->exists();
+
+            if (! $exists) {
                 TalkAssignment::query()->create([
                     'team_id' => $team->id,
                     'date' => $date,
@@ -56,31 +62,55 @@ class ScheduleHorizon
 
                 $created++;
             }
+
+            $weekStart = $weekStart->copy()->addWeek();
         }
 
         return $created;
     }
 
     /**
-     * Every occurrence of the meeting weekday within the given month.
-     *
-     * @return list<Carbon>
+     * The concrete meeting date of a week: `week_start` + the congregation's
+     * meeting weekday (semana ISO: segunda a domingo).
      */
-    protected function datesFor(Carbon $month, int $weekday): array
+    public function meetingDateFor(CarbonInterface $weekStart, int $weekday): Carbon
     {
-        $date = $month->copy()->startOfMonth();
+        $offset = $weekday === Carbon::SUNDAY ? 6 : $weekday - 1;
 
-        if ($date->dayOfWeek !== $weekday) {
-            $date = $date->next($weekday);
-        }
+        return Carbon::instance($weekStart)->startOfWeek(Carbon::MONDAY)->addDays($offset)->startOfDay();
+    }
 
-        $dates = [];
+    /**
+     * The meeting weekday of the team's home congregation.
+     */
+    public function homeWeekday(Team $team): int
+    {
+        return $team->homeCongregation?->meeting_weekday ?? Carbon::SATURDAY;
+    }
 
-        while ($date->month === $month->month) {
-            $dates[] = $date->copy()->startOfDay();
-            $date = $date->addWeek();
-        }
+    /**
+     * Re-derive the concrete date of future OPEN home slots after the home
+     * congregation's meeting weekday changed. Filled slots keep their date
+     * (o coordenador revisa manualmente).
+     */
+    protected function recalculateOpenDates(Team $team, int $weekday): void
+    {
+        $today = Carbon::today();
 
-        return $dates;
+        TalkAssignment::query()
+            ->where('team_id', $team->id)
+            ->where('type', TalkAssignmentType::Home)
+            ->where('status', TalkAssignmentStatus::Open)
+            ->whereDate('week_start', '>=', $today->copy()->startOfWeek(Carbon::MONDAY))
+            ->get()
+            ->each(function (TalkAssignment $assignment) use ($weekday, $today): void {
+                $date = $this->meetingDateFor($assignment->week_start, $weekday);
+
+                if ($date->lt($today) || $assignment->date->equalTo($date)) {
+                    return;
+                }
+
+                $assignment->forceFill(['date' => $date])->save();
+            });
     }
 }

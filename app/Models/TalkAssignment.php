@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string $team_id
  * @property Carbon $date
+ * @property Carbon $week_start
  * @property TalkAssignmentType $type
  * @property string|null $speaker_id
  * @property string|null $outline_id
@@ -51,6 +52,17 @@ class TalkAssignment extends Model
     use HasFactory, HasUlids;
 
     /**
+     * Keep `week_start` (segunda-feira ISO da semana) derived from `date`:
+     * a semana é a unidade de programação; a data concreta é derivada.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (TalkAssignment $assignment): void {
+            $assignment->week_start = $assignment->date->copy()->startOfWeek(Carbon::MONDAY);
+        });
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -59,6 +71,7 @@ class TalkAssignment extends Model
     {
         return [
             'date' => 'date',
+            'week_start' => 'date',
             'type' => TalkAssignmentType::class,
             'status' => TalkAssignmentStatus::class,
         ];
@@ -95,7 +108,7 @@ class TalkAssignment extends Model
     }
 
     /**
-     * Get the counterpart congregation (destino ou origem da permuta).
+     * Get the counterpart congregation (destino ou origem da troca).
      *
      * @return BelongsTo<Congregation, $this>
      */

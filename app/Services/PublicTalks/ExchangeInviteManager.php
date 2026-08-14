@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 
 /**
- * Ciclo de vida do convite mensal de permuta: 1 convite por time+mês,
+ * Ciclo de vida do convite mensal de troca: 1 convite por time+mês,
  * cobrindo as semanas em falta daquele mês. Nunca é recriado.
  */
 class ExchangeInviteManager

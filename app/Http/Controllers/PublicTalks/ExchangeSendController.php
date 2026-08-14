@@ -100,7 +100,7 @@ class ExchangeSendController extends Controller
             'body' => $validated['body'],
         ]);
 
-        if (in_array($send->status, [ExchangeInviteSendStatus::Pending, ExchangeInviteSendStatus::Sent], true)) {
+        if (in_array($send->status, [ExchangeInviteSendStatus::Pending, ExchangeInviteSendStatus::Sent, ExchangeInviteSendStatus::Accepted], true)) {
             $send->forceFill([
                 'status' => ExchangeInviteSendStatus::Answered,
                 'answered_at' => now(),

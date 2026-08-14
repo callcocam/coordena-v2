@@ -2,8 +2,8 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { Pencil, Plus, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +24,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useT } from '@/composables/useT';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { schedule } from '@/routes/public-talks';
 import {
     destroy as destroyCoordinator,
     store as storeCoordinator,
@@ -119,15 +120,12 @@ const roleLabel = (role: CoordinatorRole): string =>
 <template>
     <Head :title="t('app.public_talks.coordinators.title')" />
 
-    <div class="flex flex-col space-y-6 p-4 sm:p-6">
-        <div
-            class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
-        >
-            <Heading
-                title="app.public_talks.coordinators.title"
-                description="app.public_talks.coordinators.description"
-            />
-
+    <PageContainer
+        title="app.public_talks.coordinators.title"
+        description="app.public_talks.coordinators.description"
+        :back-href="schedule(teamSlug)"
+    >
+        <template #actions>
             <Button
                 v-if="props.canManage"
                 data-test="add-coordinator"
@@ -136,7 +134,7 @@ const roleLabel = (role: CoordinatorRole): string =>
                 <Plus class="size-4" />
                 {{ t('app.public_talks.coordinators.add') }}
             </Button>
-        </div>
+        </template>
 
         <div
             v-if="props.coordinators.length === 0"
@@ -196,7 +194,7 @@ const roleLabel = (role: CoordinatorRole): string =>
                 </div>
             </div>
         </div>
-    </div>
+    </PageContainer>
 
     <Dialog v-model:open="dialogOpen">
         <DialogContent>

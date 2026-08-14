@@ -212,6 +212,7 @@ class ScheduleController extends Controller
             ->map(fn (TalkAssignment $assignment): array => [
                 'id' => $assignment->id,
                 'date' => $assignment->date->toDateString(),
+                'week_start' => $assignment->week_start->toDateString(),
                 'type' => $assignment->type->value,
                 'status' => $assignment->status->value,
                 'speaker' => $assignment->speaker === null ? null : [

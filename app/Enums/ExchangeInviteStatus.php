@@ -3,7 +3,7 @@
 namespace App\Enums;
 
 /**
- * Situação do convite mensal de permuta.
+ * Situação do convite mensal de troca.
  */
 enum ExchangeInviteStatus: string
 {

@@ -105,6 +105,14 @@
 | 5 | `fase-5-conversa-coordenador.md` | Menu guiado do coordenador pelo WhatsApp | 4 |
 | 6 | `fase-6-scheduler.md` | Horizonte automático, lembretes D-3/D-1, nudge/expiração, ativação em produção | 3, 4 |
 
+## Melhorias pós-fases (chats separados, após validação com o usuário)
+
+| # | Arquivo | Entrega | Depende de |
+|---|---------|---------|------------|
+| M1 | `melhoria-1-semana-e-horarios.md` | 1 slot por **semana** (não por dia), semana ancorada na segunda-feira, dia/horário da reunião (casa e parceira) na tela e no convite | 1, 2 |
+| M2 | `melhoria-2-apresentacao-e-optin.md` | Mensagem de apresentação no 1º contato (link do sistema + opt-in de trocas com botões), recusa fora do rodízio, reativação identificada pelo sistema, assunto diverso → coordenador | 2, 3, 4 |
+| M3 | `melhoria-3-convite-conversacional.md` | Convite de troca em 2 etapas (abridor curto com sim/não, sem link; conteúdo rico só por sessão pós-aceite = economia de Meta), contagem de oradores no convite, oradores só expostos após aceite, variante "pedido de ajuda" quando não há orador livre (com sugestão de arranjo direto entre coordenador e oradores), regra 1 fora/mês via `SpeakerAvailability` | 2, 3, 4, M1, M2 |
+
 ## Evoluções futuras registradas (fora de escopo agora)
 
 - Agente/IA para interpretar a resposta em texto da congregação e pré-preencher ofertas

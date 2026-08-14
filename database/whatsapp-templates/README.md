@@ -25,10 +25,15 @@ Antes de criar um botão novo, confira esta tabela e registre o dono aqui.
 | --- | --- | --- |
 | `Tudo certo` | Confirmação do orador | `coordena_talk_assignment`, `coordena_talk_reminder` |
 | `Preciso remarcar` | Confirmação do orador | `coordena_talk_assignment`, `coordena_talk_reminder` |
+| `Sim, vamos combinar` | Convite de troca (parceira) | `coordena_exchange_invite` |
+| `Podemos ajudar` | Convite de troca (parceira) | `coordena_exchange_help` |
+| `Este mês não` | Convite de troca (parceira) | `coordena_exchange_invite`, `coordena_exchange_help` |
 
-`coordena_exchange_invite` e `coordena_coordinator_alert` não têm botões de
-propósito: a permuta responde pelo portal (`portal_token`) e o alerta só
-aponta para a tela.
+Os botões do convite roteiam por correlação de `wamid` (nunca só pelo rótulo):
+o aceite abre a janela de 24h e o conteúdo rico (semanas, oradores, link do
+portal `portal_token`) segue por mensagem de sessão gratuita.
+`coordena_coordinator_alert` não tem botões de propósito: o alerta só aponta
+para a tela.
 
 ## Estado na Meta
 

@@ -39,8 +39,8 @@ class SetupCongregationRequest extends FormRequest
             ],
             'name' => ['required_without:congregation_id', 'nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:120'],
-            'meeting_weekday' => ['nullable', 'integer', 'between:0,6'],
-            'meeting_time' => ['nullable', 'date_format:H:i'],
+            'meeting_weekday' => ['required_without:congregation_id', 'nullable', 'integer', 'between:0,6'],
+            'meeting_time' => ['required_without:congregation_id', 'nullable', 'date_format:H:i'],
         ];
     }
 }

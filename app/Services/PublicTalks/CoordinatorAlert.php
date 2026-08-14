@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Avisa o coordenador responsável (e ajudantes) sobre algo que aconteceu no
- * módulo de discursos: orador confirmou, convite de permuta aceito, etc.
+ * módulo de discursos: orador confirmou, convite de troca aceito, etc.
  *
  * Para cada destinatário de {@see ResponsibleCoordinator::recipientsFor()},
  * manda mensagem de sessão quando a janela de 24h dele está aberta (há inbound
@@ -60,7 +60,7 @@ class CoordinatorAlert
                 $phone,
                 TemplateMessage::make('coordinator_alert', [
                     'coordinator' => $coordinator->name,
-                    'summary' => $summary,
+                    'summary' => $this->singleLine($summary),
                 ]),
             );
         } catch (CloudApiException $exception) {
@@ -70,6 +70,16 @@ class CoordinatorAlert
                 'error' => $exception->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * A Meta rejeita quebra de linha dentro de variável de template. Resumos
+     * multi-linha (ex.: texto livre de orador encaminhado íntegro — só a
+     * sessão preserva a formatação) são achatados para o template.
+     */
+    protected function singleLine(string $summary): string
+    {
+        return trim(preg_replace('/\s+/u', ' ', $summary) ?? $summary);
     }
 
     /**

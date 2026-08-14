@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ExchangeInviteKind;
 use App\Enums\ExchangeInviteSendStatus;
 use Database\Factories\ExchangeInviteSendFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -14,16 +15,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
- * Envio de um convite de permuta a uma congregação parceira.
+ * Envio de um convite de troca a uma congregação parceira.
  *
  * @property string $id
  * @property string $invite_id
  * @property string $congregation_id
  * @property string $channel
+ * @property ExchangeInviteKind $kind
  * @property string|null $portal_token
  * @property ExchangeInviteSendStatus $status
  * @property Carbon|null $sent_at
  * @property Carbon|null $answered_at
+ * @property Carbon|null $accepted_at
+ * @property Carbon|null $nudged_at
  * @property string|null $sent_by_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -37,10 +41,13 @@ use Illuminate\Support\Carbon;
     'invite_id',
     'congregation_id',
     'channel',
+    'kind',
     'portal_token',
     'status',
     'sent_at',
     'answered_at',
+    'accepted_at',
+    'nudged_at',
     'sent_by_id',
 ])]
 class ExchangeInviteSend extends Model
@@ -56,9 +63,12 @@ class ExchangeInviteSend extends Model
     protected function casts(): array
     {
         return [
+            'kind' => ExchangeInviteKind::class,
             'status' => ExchangeInviteSendStatus::class,
             'sent_at' => 'datetime',
             'answered_at' => 'datetime',
+            'accepted_at' => 'datetime',
+            'nudged_at' => 'datetime',
         ];
     }
 

@@ -1,10 +1,12 @@
 <?php
 
+use App\Enums\ExchangeInviteKind;
 use App\Enums\ExchangeInviteSendStatus;
 use App\Jobs\SendExchangeInvite;
 use App\Models\Congregation;
 use App\Models\ExchangeInvite;
 use App\Models\ExchangeInviteSend;
+use App\Models\Speaker;
 use App\Models\Team;
 use App\Models\TeamWhatsappConnection;
 use App\Models\User;
@@ -12,6 +14,7 @@ use App\Models\WhatsappTermsAcceptance;
 use Callcocam\WhatsAppCloud\CloudApiClient;
 use Callcocam\WhatsAppCloud\Exceptions\CloudApiException;
 use Callcocam\WhatsAppCloud\Facades\WhatsApp;
+use Callcocam\WhatsAppCloud\Messages\InteractiveMessage;
 use Callcocam\WhatsAppCloud\Messages\SendResult;
 use Callcocam\WhatsAppCloud\Messages\TemplateMessage;
 use Callcocam\WhatsAppCloud\Models\WhatsAppInboundMessage;
@@ -32,7 +35,7 @@ function exchangeWhatsappTeam(): array
     TeamWhatsappConnection::factory()->create(['team_id' => $team->id]);
     WhatsappTermsAcceptance::factory()->create(['team_id' => $team->id, 'user_id' => $user->id]);
 
-    $partner = Congregation::factory()->create([
+    $partner = Congregation::factory()->optedIn()->create([
         'owner_user_id' => $user->id,
         'contact_phone' => '51999990000',
     ]);
@@ -107,8 +110,9 @@ test('whatsapp channel is blocked when the congregation has no valid phone', fun
     Queue::assertNothingPushed();
 });
 
-test('the job delivers the template and marks the send as sent', function () {
+test('the job delivers the exchange opener with the speaker count and no link', function () {
     [, $team, $partner] = exchangeWhatsappTeam();
+    Speaker::factory()->create(['congregation_id' => $team->home_congregation_id]);
     $send = pendingWhatsappSend($team, $partner);
 
     $client = Mockery::mock(CloudApiClient::class);
@@ -117,23 +121,48 @@ test('the job delivers the template and marks the send as sent', function () {
         ->withArgs(function (string $to, TemplateMessage $template) use ($send) {
             expect($to)->toBe('5551999990000')
                 ->and($template->key)->toBe('exchange_invite')
-                ->and($template->params['link'])->toContain($send->portal_token);
+                ->and($template->params['count'])->toBe('1 orador')
+                ->and($template->params)->not->toHaveKey('link')
+                ->and(implode(' ', $template->params))->not->toContain($send->portal_token);
 
             return true;
         })
         ->andReturn(SendResult::sent('cloud', 'wamid.EXCHANGE'));
-    $client->shouldNotReceive('sendSessionText');
+    $client->shouldNotReceive('sendInteractive');
     WhatsApp::shouldReceive('for')->andReturn($client);
 
     SendExchangeInvite::dispatchSync($send);
 
     $send->refresh();
     expect($send->status)->toBe(ExchangeInviteSendStatus::Sent)
+        ->and($send->kind)->toBe(ExchangeInviteKind::Exchange)
         ->and($send->sent_at)->not->toBeNull()
         ->and($send->messages()->sole()->wamid)->toBe('wamid.EXCHANGE');
 });
 
-test('the job also sends the rich text when the 24h window is open', function () {
+test('the job falls back to the help variant when no speaker is free in the month', function () {
+    [, $team, $partner] = exchangeWhatsappTeam();
+    $send = pendingWhatsappSend($team, $partner);
+
+    $client = Mockery::mock(CloudApiClient::class);
+    $client->shouldReceive('sendTemplate')
+        ->once()
+        ->withArgs(function (string $to, TemplateMessage $template) {
+            expect($template->key)->toBe('exchange_help')
+                ->and($template->params)->not->toHaveKey('count')
+                ->and($template->params)->not->toHaveKey('link');
+
+            return true;
+        })
+        ->andReturn(SendResult::sent('cloud', 'wamid.HELP'));
+    WhatsApp::shouldReceive('for')->andReturn($client);
+
+    SendExchangeInvite::dispatchSync($send);
+
+    expect($send->refresh()->kind)->toBe(ExchangeInviteKind::Help);
+});
+
+test('the job sends a single interactive session message when the 24h window is open', function () {
     [, $team, $partner] = exchangeWhatsappTeam();
     $send = pendingWhatsappSend($team, $partner);
 
@@ -146,16 +175,24 @@ test('the job also sends the rich text when the 24h window is open', function ()
     ]);
 
     $client = Mockery::mock(CloudApiClient::class);
-    $client->shouldReceive('sendTemplate')->once()->andReturn(SendResult::sent('cloud', 'wamid.EXCHANGE'));
-    $client->shouldReceive('sendSessionText')
+    $client->shouldNotReceive('sendTemplate');
+    $client->shouldReceive('sendInteractive')
         ->once()
-        ->withArgs(fn (string $to, string $body) => $to === '5551999990000' && $body !== '')
+        ->withArgs(function (string $to, InteractiveMessage $message) {
+            expect($to)->toBe('5551999990000')
+                ->and($message->body)->not->toBe('')
+                ->and($message->options)->toBe(['Podemos ajudar', 'Este mês não']);
+
+            return true;
+        })
         ->andReturn(SendResult::sent('cloud', 'wamid.SESSION'));
     WhatsApp::shouldReceive('for')->andReturn($client);
 
     SendExchangeInvite::dispatchSync($send);
 
-    expect($send->refresh()->status)->toBe(ExchangeInviteSendStatus::Sent);
+    $send->refresh();
+    expect($send->status)->toBe(ExchangeInviteSendStatus::Sent)
+        ->and($send->messages()->sole()->wamid)->toBe('wamid.SESSION');
 });
 
 test('a terminal meta error marks the send as failed', function () {

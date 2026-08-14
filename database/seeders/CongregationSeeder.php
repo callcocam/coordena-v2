@@ -5,7 +5,9 @@ namespace Database\Seeders;
 use App\Models\Congregation;
 use App\Models\User;
 use App\Support\Phone;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Arr;
 
 /**
  * Semeia o acervo de congregações para um usuário dono.
@@ -50,6 +52,8 @@ class CongregationSeeder extends Seeder
                 'secretary_name' => $row['secretary_name'] ?? null,
                 'secretary_phone' => Phone::normalize($row['secretary_phone'] ?? null),
                 'secretary_email' => $row['secretary_email'] ?? null,
+                'meeting_weekday' => $row['meeting_weekday'] ?? Arr::random([Carbon::SATURDAY, Carbon::SUNDAY]),
+                'meeting_time' => $row['meeting_time'] ?? Arr::random(['18:00', '18:30', '19:00', '19:30', '20:00']),
             ]);
         }
     }

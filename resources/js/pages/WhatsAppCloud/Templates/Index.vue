@@ -20,7 +20,7 @@ import {
 } from '@lucide/vue';
 import { computed, reactive } from 'vue';
 import { toast } from 'vue-sonner';
-import Heading from '@/components/Heading.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -180,30 +180,25 @@ function refresh() {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="WhatsApp Templates" />
 
-        <div class="flex flex-col space-y-6 p-4">
-            <div
-                class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
-            >
-                <Heading
-                    variant="small"
-                    title="WhatsApp — Templates"
-                    :description="wabaLabel"
-                />
-                <div class="flex shrink-0 gap-2">
-                    <Button
-                        variant="outline"
-                        title="Recarregar a lista"
-                        @click="refresh"
-                    >
-                        <RefreshCw />
-                        <span class="hidden sm:inline">Atualizar</span>
-                    </Button>
-                    <Button @click="openForm('create')">
-                        <Plus />
-                        <span class="hidden sm:inline">Novo template</span>
-                    </Button>
-                </div>
-            </div>
+        <PageContainer
+            width="5xl"
+            title="WhatsApp — Templates"
+            :description="wabaLabel"
+        >
+            <template #actions>
+                <Button
+                    variant="outline"
+                    title="Recarregar a lista"
+                    @click="refresh"
+                >
+                    <RefreshCw />
+                    <span class="hidden sm:inline">Atualizar</span>
+                </Button>
+                <Button @click="openForm('create')">
+                    <Plus />
+                    <span class="hidden sm:inline">Novo template</span>
+                </Button>
+            </template>
 
             <div
                 v-if="loadError"
@@ -370,7 +365,7 @@ function refresh() {
                     Nenhum template encontrado.
                 </div>
             </div>
-        </div>
+        </PageContainer>
 
         <TemplateDetailModal
             :open="detail.open"

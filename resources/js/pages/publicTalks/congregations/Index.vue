@@ -2,8 +2,8 @@
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Plus, Search } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useT } from '@/composables/useT';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { dashboard } from '@/routes';
 import { index as congregationsIndex, show, store } from '@/routes/acervo/congregations';
 import type { CongregationSummary } from '@/types';
 
@@ -84,15 +85,12 @@ const submitCreate = () => {
 <template>
     <Head :title="t('app.public_talks.congregations.title')" />
 
-    <div class="flex flex-col space-y-6 p-4 sm:p-6">
-        <div
-            class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
-        >
-            <Heading
-                title="app.public_talks.congregations.title"
-                description="app.public_talks.congregations.description"
-            />
-
+    <PageContainer
+        :title="t('app.public_talks.congregations.title')"
+        :description="t('app.public_talks.congregations.description')"
+        :back-href="dashboard(teamSlug)"
+    >
+        <template #actions>
             <Button
                 v-if="props.canManage"
                 data-test="add-congregation"
@@ -101,7 +99,7 @@ const submitCreate = () => {
                 <Plus class="size-4" />
                 {{ t('app.public_talks.congregations.add') }}
             </Button>
-        </div>
+        </template>
 
         <div class="relative max-w-sm">
             <Search
@@ -171,7 +169,7 @@ const submitCreate = () => {
                 </div>
             </Link>
         </div>
-    </div>
+    </PageContainer>
 
     <Dialog v-model:open="createOpen">
         <DialogContent>
