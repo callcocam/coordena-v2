@@ -37,17 +37,24 @@ class ScheduleHorizon
                     continue;
                 }
 
-                $assignment = TalkAssignment::query()->firstOrCreate([
+                $exists = TalkAssignment::query()
+                    ->where('team_id', $team->id)
+                    ->whereDate('date', $date)
+                    ->whereIn('type', [TalkAssignmentType::Home, TalkAssignmentType::Incoming])
+                    ->exists();
+
+                if ($exists) {
+                    continue;
+                }
+
+                TalkAssignment::query()->create([
                     'team_id' => $team->id,
                     'date' => $date,
                     'type' => TalkAssignmentType::Home,
-                ], [
                     'status' => TalkAssignmentStatus::Open,
                 ]);
 
-                if ($assignment->wasRecentlyCreated) {
-                    $created++;
-                }
+                $created++;
             }
         }
 

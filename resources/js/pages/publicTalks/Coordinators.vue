@@ -231,7 +231,10 @@ const roleLabel = (role: CoordinatorRole): string =>
                             t('app.public_talks.coordinators.role_label')
                         }}</Label>
                         <Select v-model="form.role">
-                            <SelectTrigger data-test="coordinator-role">
+                            <SelectTrigger
+                                class="w-full"
+                                data-test="coordinator-role"
+                            >
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>

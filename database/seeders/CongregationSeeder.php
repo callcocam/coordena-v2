@@ -11,7 +11,7 @@ use Illuminate\Database\Seeder;
  * Semeia o acervo de congregações para um usuário dono.
  *
  * Usa o primeiro usuário como dono por padrão. Idempotente por
- * (dono, nome, cidade). O arquivo de dados é local e não versionado —
+ * (dono, nome) — a mesma chave única do banco. O arquivo de dados é local e não versionado —
  * quando ausente, o seeder apenas avisa e segue.
  */
 class CongregationSeeder extends Seeder
@@ -37,11 +37,11 @@ class CongregationSeeder extends Seeder
         $rows = require $path;
 
         foreach ($rows as $row) {
-            Congregation::query()->firstOrCreate([
+            Congregation::query()->updateOrCreate([
                 'owner_user_id' => $owner->id,
                 'name' => $row['name'],
-                'city' => $row['city'] ?? null,
             ], [
+                'city' => $row['city'] ?? null,
                 'circuit' => $row['circuit'] ?? null,
                 'address' => $row['address'] ?? null,
                 'contact_name' => $row['contact_name'] ?? null,

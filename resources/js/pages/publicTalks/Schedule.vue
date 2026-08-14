@@ -296,7 +296,7 @@ const submit = (clear = false) => {
                         t('app.public_talks.schedule.speaker_label')
                     }}</Label>
                     <Select v-model="speakerId">
-                        <SelectTrigger data-test="speaker-select">
+                        <SelectTrigger class="w-full" data-test="speaker-select">
                             <SelectValue
                                 :placeholder="
                                     t(
@@ -343,7 +343,7 @@ const submit = (clear = false) => {
                         t('app.public_talks.schedule.outline_label')
                     }}</Label>
                     <Select v-model="outlineId">
-                        <SelectTrigger data-test="outline-select">
+                        <SelectTrigger class="w-full" data-test="outline-select">
                             <SelectValue
                                 :placeholder="
                                     t(

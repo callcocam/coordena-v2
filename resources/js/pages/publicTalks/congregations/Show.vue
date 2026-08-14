@@ -458,7 +458,7 @@ const outlineLabel = (speaker: SpeakerDetail): string => {
                                             : Number(value))
                             "
                         >
-                            <SelectTrigger>
+                            <SelectTrigger class="w-full">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -532,7 +532,7 @@ const outlineLabel = (speaker: SpeakerDetail): string => {
                             t('app.public_talks.speakers.role_label')
                         }}</Label>
                         <Select v-model="speakerForm.role">
-                            <SelectTrigger data-test="speaker-role">
+                            <SelectTrigger class="w-full" data-test="speaker-role">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>

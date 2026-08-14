@@ -127,7 +127,10 @@ const submitCoordinator = () => {
                     t('app.public_talks.setup.existing_label')
                 }}</Label>
                 <Select v-model="congregationId">
-                    <SelectTrigger data-test="existing-congregation">
+                    <SelectTrigger
+                        class="w-full"
+                        data-test="existing-congregation"
+                    >
                         <SelectValue
                             :placeholder="
                                 t(
@@ -182,7 +185,7 @@ const submitCoordinator = () => {
                             t('app.public_talks.setup.weekday_label')
                         }}</Label>
                         <Select v-model="meetingWeekday">
-                            <SelectTrigger>
+                            <SelectTrigger class="w-full">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
