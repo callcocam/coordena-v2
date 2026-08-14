@@ -20,6 +20,7 @@ import {
     congregation as setupCongregation,
     coordinator as setupCoordinator,
 } from '@/routes/public-talks/setup';
+import PhoneInput from '@whatsapp-cloud/components/PhoneInput/PhoneInput.vue';
 
 type CongregationOption = {
     id: string;
@@ -247,7 +248,7 @@ const submitCoordinator = () => {
                 <Label for="coordinator-phone">{{
                     t('app.public_talks.setup.coordinator_phone_label')
                 }}</Label>
-                <Input id="coordinator-phone" v-model="coordinatorPhone" />
+                <PhoneInput id="coordinator-phone" v-model="coordinatorPhone" />
                 <InputError :message="errors.phone" />
             </div>
 
@@ -270,7 +271,7 @@ const submitCoordinator = () => {
                         <Label>{{
                             t('app.public_talks.coordinators.phone_label')
                         }}</Label>
-                        <Input v-model="helper.phone" />
+                        <PhoneInput v-model="helper.phone" />
                     </div>
                     <Button
                         variant="ghost"

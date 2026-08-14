@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\SpeakerNotificationKind;
+use App\Enums\SpeakerNotificationStatus;
 use Database\Factories\TalkAssignmentNotificationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -16,9 +18,9 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string $talk_assignment_id
  * @property string $speaker_id
- * @property string $kind
+ * @property SpeakerNotificationKind $kind
  * @property string|null $wamid
- * @property string $status
+ * @property SpeakerNotificationStatus $status
  * @property Carbon|null $sent_at
  * @property Carbon|null $responded_at
  * @property array<string, mixed>|null $response_payload
@@ -53,6 +55,8 @@ class TalkAssignmentNotification extends Model
     protected function casts(): array
     {
         return [
+            'kind' => SpeakerNotificationKind::class,
+            'status' => SpeakerNotificationStatus::class,
             'sent_at' => 'datetime',
             'responded_at' => 'datetime',
             'response_payload' => 'array',

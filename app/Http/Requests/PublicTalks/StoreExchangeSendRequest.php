@@ -18,6 +18,17 @@ class StoreExchangeSendRequest extends FormRequest
     }
 
     /**
+     * The manual channel remains the default so older callers that never
+     * send an explicit channel keep working.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('channel')) {
+            $this->merge(['channel' => 'manual']);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -29,6 +40,7 @@ class StoreExchangeSendRequest extends FormRequest
 
         return [
             'month' => ['required', 'date_format:Y-m'],
+            'channel' => ['required', Rule::in(['manual', 'whatsapp'])],
             'congregation_id' => [
                 'required',
                 'string',

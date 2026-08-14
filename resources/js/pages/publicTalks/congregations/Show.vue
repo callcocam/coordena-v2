@@ -4,9 +4,9 @@ import { Pencil, Plus, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import OutlinePicker from '@/components/OutlinePicker.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -37,6 +37,7 @@ import type {
     SpeakerDetail,
     SpeakerRole,
 } from '@/types';
+import PhoneInput from '@whatsapp-cloud/components/PhoneInput/PhoneInput.vue';
 
 type Props = {
     congregation: CongregationDetail;
@@ -420,7 +421,7 @@ const outlineLabel = (speaker: SpeakerDetail): string => {
                         <Label>{{
                             t('app.public_talks.congregations.contact_phone_label')
                         }}</Label>
-                        <Input v-model="congregationForm.contact_phone" />
+                        <PhoneInput v-model="congregationForm.contact_phone" />
                     </div>
                 </div>
 
@@ -435,7 +436,7 @@ const outlineLabel = (speaker: SpeakerDetail): string => {
                         <Label>{{
                             t('app.public_talks.congregations.secretary_phone_label')
                         }}</Label>
-                        <Input v-model="congregationForm.secretary_phone" />
+                        <PhoneInput v-model="congregationForm.secretary_phone" />
                     </div>
                 </div>
 
@@ -551,7 +552,7 @@ const outlineLabel = (speaker: SpeakerDetail): string => {
                         <Label for="speaker-phone">{{
                             t('app.public_talks.speakers.phone_label')
                         }}</Label>
-                        <Input
+                        <PhoneInput
                             id="speaker-phone"
                             v-model="speakerForm.phone"
                         />
@@ -573,30 +574,13 @@ const outlineLabel = (speaker: SpeakerDetail): string => {
                     <Label>{{
                         t('app.public_talks.speakers.outlines_label')
                     }}</Label>
-                    <div
-                        class="max-h-48 space-y-1 overflow-y-auto rounded-lg border p-2"
-                    >
-                        <label
-                            v-for="outline in props.outlines"
-                            :key="outline.id"
-                            class="flex cursor-pointer items-center gap-2 rounded p-1.5 text-sm hover:bg-accent"
-                        >
-                            <Checkbox
-                                :model-value="
-                                    speakerForm.outline_ids.includes(
-                                        outline.id,
-                                    )
-                                "
-                                @update:model-value="
-                                    () => toggleOutline(outline.id)
-                                "
-                            />
-                            <span class="text-muted-foreground">
-                                {{ outline.number }}.
-                            </span>
-                            <span class="truncate">{{ outline.title }}</span>
-                        </label>
-                    </div>
+                    <OutlinePicker
+                        multiple
+                        :outlines="props.outlines"
+                        :selected-ids="speakerForm.outline_ids"
+                        data-test="speaker-outlines"
+                        @toggle="toggleOutline"
+                    />
                     <InputError :message="errors.outline_ids" />
                 </div>
 

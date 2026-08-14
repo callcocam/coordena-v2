@@ -5,19 +5,23 @@ namespace App\Http\Controllers\PublicTalks;
 use App\Enums\ExchangeInviteSendStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicTalks\StoreExchangeSendRequest;
+use App\Jobs\SendExchangeInvite;
 use App\Models\Congregation;
 use App\Models\ExchangeInvite;
 use App\Models\ExchangeInviteSend;
 use App\Models\TalkAssignment;
+use App\Models\Team;
 use App\Services\PublicTalks\ExchangeInviteManager;
 use App\Services\PublicTalks\ExchangeRoundRobin;
 use App\Services\PublicTalks\InviteComposer;
 use App\Services\PublicTalks\ScheduleHorizon;
+use App\Support\Phone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -71,11 +75,15 @@ class ExchangeController extends Controller
             'composeText' => $selected !== null ? $this->composer->compose($invite, $selected) : null,
             'sends' => $this->sendsFor($invite),
             'canSend' => Gate::allows('send', $invite),
+            'whatsappEnabled' => $team->canSendWhatsappApi(),
+            'selectedHasWhatsapp' => $selected !== null && Phone::normalize($selected->contact_phone) !== null,
         ]);
     }
 
     /**
-     * Register a manual send of the invite to a partner congregation.
+     * Register a send of the invite to a partner congregation, either manual
+     * (copy/paste, marked sent right away) or via WhatsApp Cloud (queued as
+     * pending and delivered by {@see SendExchangeInvite}).
      */
     public function storeSend(StoreExchangeSendRequest $request): RedirectResponse
     {
@@ -86,23 +94,53 @@ class ExchangeController extends Controller
         Gate::authorize('send', $invite);
 
         $congregation = Congregation::query()->findOrFail($request->string('congregation_id')->value());
+        $channel = $request->string('channel')->value();
+
+        if ($channel === 'whatsapp') {
+            $this->ensureCanSendWhatsapp($team, $congregation);
+        }
 
         $send = $invite->sends()->create([
             'congregation_id' => $congregation->id,
-            'channel' => 'manual',
+            'channel' => $channel,
             'portal_token' => Str::random(48),
-            'status' => ExchangeInviteSendStatus::Sent,
-            'sent_at' => now(),
+            'status' => $channel === 'whatsapp'
+                ? ExchangeInviteSendStatus::Pending
+                : ExchangeInviteSendStatus::Sent,
+            'sent_at' => $channel === 'whatsapp' ? null : now(),
             'sent_by_id' => $request->user()->id,
         ]);
 
-        $send->messages()->create([
-            'direction' => 'outbound',
-            'channel' => 'manual',
-            'body' => $this->composer->compose($invite, $congregation),
-        ]);
+        if ($channel === 'whatsapp') {
+            SendExchangeInvite::dispatch($send);
+        } else {
+            $send->messages()->create([
+                'direction' => 'outbound',
+                'channel' => 'manual',
+                'body' => $this->composer->compose($invite, $congregation),
+            ]);
+        }
 
         return back();
+    }
+
+    /**
+     * Block the WhatsApp channel when the team cannot send via the Cloud API
+     * or the congregation has no valid phone number.
+     */
+    protected function ensureCanSendWhatsapp(Team $team, Congregation $congregation): void
+    {
+        if (! $team->canSendWhatsappApi()) {
+            throw ValidationException::withMessages([
+                'channel' => __('O canal WhatsApp não está pronto neste time: ative a API, aceite os termos e conecte um número.'),
+            ]);
+        }
+
+        if (Phone::normalize($congregation->contact_phone) === null) {
+            throw ValidationException::withMessages([
+                'congregation_id' => __('A congregação :name não tem um telefone WhatsApp válido cadastrado.', ['name' => $congregation->name]),
+            ]);
+        }
     }
 
     /**

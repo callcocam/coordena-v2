@@ -30,6 +30,7 @@ Route::prefix('{current_team}')
 
         Route::get('discursos', [ScheduleController::class, 'index'])->name('public-talks.schedule');
         Route::put('discursos/semanas/{assignment}', [ScheduleController::class, 'update'])->name('public-talks.schedule.update');
+        Route::post('discursos/semanas/{assignment}/notificar', [ScheduleController::class, 'notify'])->name('public-talks.schedule.notify');
 
         Route::post('discursos/setup/congregacao', [SetupController::class, 'storeCongregation'])->name('public-talks.setup.congregation');
         Route::post('discursos/setup/coordenador', [SetupController::class, 'storeCoordinator'])->name('public-talks.setup.coordinator');

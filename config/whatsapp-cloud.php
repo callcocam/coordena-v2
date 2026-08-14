@@ -200,7 +200,30 @@ return [
     */
 
     'templates' => [
-        //
+        'talk_assignment' => [
+            'name' => 'coordena_talk_assignment',
+            'language' => 'pt_BR',
+            'category' => 'utility',
+            'params' => ['speaker', 'date', 'congregation', 'outline', 'reference'],
+        ],
+        'talk_reminder' => [
+            'name' => 'coordena_talk_reminder',
+            'language' => 'pt_BR',
+            'category' => 'utility',
+            'params' => ['speaker', 'date', 'congregation', 'outline'],
+        ],
+        'exchange_invite' => [
+            'name' => 'coordena_exchange_invite',
+            'language' => 'pt_BR',
+            'category' => 'utility',
+            'params' => ['contact', 'congregation', 'month', 'link'],
+        ],
+        'coordinator_alert' => [
+            'name' => 'coordena_coordinator_alert',
+            'language' => 'pt_BR',
+            'category' => 'utility',
+            'params' => ['coordinator', 'summary'],
+        ],
     ],
 
     /*
@@ -214,6 +237,6 @@ return [
     |
     */
 
-    'definitions_path' => env('WHATSAPP_CLOUD_DEFINITIONS_PATH'),
+    'definitions_path' => env('WHATSAPP_CLOUD_DEFINITIONS_PATH', database_path('whatsapp-templates')),
 
 ];

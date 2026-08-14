@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\PublicTalks;
 
 use App\Enums\PublicTalkOutlineStatus;
+use App\Enums\SpeakerNotificationKind;
 use App\Enums\TalkAssignmentStatus;
 use App\Enums\TalkAssignmentType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicTalks\UpdateScheduleSlotRequest;
+use App\Jobs\SendSpeakerAssignmentNotification;
 use App\Models\Congregation;
 use App\Models\PublicTalkOutline;
 use App\Models\Speaker;
@@ -15,6 +17,7 @@ use App\Models\Team;
 use App\Services\PublicTalks\ResponsibleCoordinator;
 use App\Services\PublicTalks\ScheduleHorizon;
 use App\Services\PublicTalks\SpeakerAvailability;
+use App\Support\Phone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -93,6 +96,47 @@ class ScheduleController extends Controller
         $assignment->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Semana atualizada.')]);
+
+        return back();
+    }
+
+    /**
+     * Queue the WhatsApp assignment notification for the slot's speaker.
+     * Re-sending is allowed: each call creates a fresh notification row.
+     */
+    public function notify(Request $request, string $current_team, TalkAssignment $assignment): RedirectResponse
+    {
+        $team = $request->user()->currentTeam;
+
+        abort_unless($assignment->team_id === $team->id && $assignment->type === TalkAssignmentType::Home, 404);
+
+        Gate::authorize('notify', $assignment);
+
+        if ($assignment->speaker_id === null || $assignment->outline_id === null) {
+            return $this->notifyError(__('Preencha orador e esboço antes de notificar.'));
+        }
+
+        if (Phone::normalize($assignment->speaker?->phone) === null) {
+            return $this->notifyError(__('O orador não tem um telefone válido para WhatsApp.'));
+        }
+
+        if (! $team->canSendWhatsappApi()) {
+            return $this->notifyError(__('O WhatsApp do time não está pronto para envios pela API.'));
+        }
+
+        SendSpeakerAssignmentNotification::queueFor($assignment, SpeakerNotificationKind::Assignment, $request->user());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Notificação enviada ao orador.')]);
+
+        return back();
+    }
+
+    /**
+     * Flash an error toast and return to the schedule.
+     */
+    protected function notifyError(string $message): RedirectResponse
+    {
+        Inertia::flash('toast', ['type' => 'error', 'message' => $message]);
 
         return back();
     }
@@ -230,12 +274,13 @@ class ScheduleController extends Controller
         return PublicTalkOutline::query()
             ->where('status', PublicTalkOutlineStatus::Active)
             ->orderBy('number')
-            ->get(['id', 'number', 'title', 'theme'])
+            ->get(['id', 'number', 'title', 'theme', 'reference_url'])
             ->map(fn (PublicTalkOutline $outline): array => [
                 'id' => $outline->id,
                 'number' => $outline->number,
                 'title' => $outline->title,
                 'theme' => $outline->theme,
+                'reference_url' => $outline->reference_url,
             ])
             ->all();
     }

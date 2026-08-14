@@ -122,11 +122,12 @@ class CongregationController extends Controller
                 ->all(),
             'outlines' => PublicTalkOutline::query()
                 ->orderBy('number')
-                ->get(['id', 'number', 'title'])
+                ->get(['id', 'number', 'title', 'reference_url'])
                 ->map(fn (PublicTalkOutline $outline): array => [
                     'id' => $outline->id,
                     'number' => $outline->number,
                     'title' => $outline->title,
+                    'reference_url' => $outline->reference_url,
                 ])
                 ->all(),
             'canManage' => Gate::allows('update', $congregation),

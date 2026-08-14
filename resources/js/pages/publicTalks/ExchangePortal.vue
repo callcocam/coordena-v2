@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { useT } from '@/composables/useT';
 import { submit as submitPortal } from '@/routes/exchange/portal';
+import PhoneInput from '@whatsapp-cloud/components/PhoneInput/PhoneInput.vue';
 
 type OfferRow = {
     speaker_name: string;
@@ -181,7 +182,7 @@ const submit = () => {
                             <Label :for="`phone-${index}`">
                                 {{ t('app.public_talks.exchange.portal.phone_label') }}
                             </Label>
-                            <Input :id="`phone-${index}`" v-model="row.phone" />
+                            <PhoneInput :id="`phone-${index}`" v-model="row.phone" />
                             <InputError :message="form.errors[`offers.${index}.phone`]" />
                         </div>
 

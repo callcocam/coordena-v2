@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Support\TeamCredentialsResolver;
 use App\Support\Translation\MergingFileLoader;
+use Callcocam\WhatsAppCloud\Contracts\WhatsAppCredentialsResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->registerTranslationLoader();
+
+        // WhatsApp::for($team) usa a conexão do próprio time quando existir,
+        // senão o número compartilhado do config `default`.
+        $this->app->bind(WhatsAppCredentialsResolver::class, TeamCredentialsResolver::class);
     }
 
     /**

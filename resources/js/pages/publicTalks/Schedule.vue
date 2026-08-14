@@ -4,6 +4,7 @@ import { CalendarDays, Phone } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import OutlinePicker from '@/components/OutlinePicker.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -342,33 +343,15 @@ const submit = (clear = false) => {
                     <Label>{{
                         t('app.public_talks.schedule.outline_label')
                     }}</Label>
-                    <Select v-model="outlineId">
-                        <SelectTrigger class="w-full" data-test="outline-select">
-                            <SelectValue
-                                :placeholder="
-                                    t(
-                                        'app.public_talks.schedule.outline_placeholder',
-                                    )
-                                "
-                            />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem
-                                v-for="outline in sortedOutlines"
-                                :key="outline.id"
-                                :value="outline.id"
-                            >
-                                nº {{ outline.number }} · {{ outline.title }}
-                                <template v-if="isPrepared(outline)">
-                                    ({{
-                                        t(
-                                            'app.public_talks.schedule.outline_prepared',
-                                        )
-                                    }})
-                                </template>
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <OutlinePicker
+                        v-model="outlineId"
+                        :outlines="sortedOutlines"
+                        :prepared-ids="selectedSpeaker?.outline_ids ?? []"
+                        :placeholder="
+                            t('app.public_talks.schedule.outline_placeholder')
+                        "
+                        data-test="outline-select"
+                    />
                     <InputError :message="errors.outline_id" />
                 </div>
             </div>

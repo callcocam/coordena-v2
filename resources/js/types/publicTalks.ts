@@ -32,6 +32,7 @@ export type OutlineOption = {
     number: number;
     title: string;
     theme?: string | null;
+    reference_url?: string | null;
 };
 
 export type SpeakerRole = 'elder' | 'ministerial_servant' | 'other';

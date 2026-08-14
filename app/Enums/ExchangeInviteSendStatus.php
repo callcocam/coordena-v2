@@ -9,6 +9,7 @@ enum ExchangeInviteSendStatus: string
 {
     case Pending = 'pending';
     case Sent = 'sent';
+    case Failed = 'failed';
     case Answered = 'answered';
     case Declined = 'declined';
     case Expired = 'expired';

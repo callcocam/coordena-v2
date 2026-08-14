@@ -43,6 +43,8 @@ type Props = {
     composeText: string | null;
     sends: SendItem[];
     canSend: boolean;
+    whatsappEnabled: boolean;
+    selectedHasWhatsapp: boolean;
 };
 
 const props = defineProps<Props>();
@@ -100,6 +102,12 @@ const copyText = async () => {
     setTimeout(() => (copied.value = false), 2000);
 };
 
+const channel = ref<'manual' | 'whatsapp'>('manual');
+
+const whatsappAvailable = computed(
+    () => props.whatsappEnabled && props.selectedHasWhatsapp,
+);
+
 const markSent = () => {
     if (!props.selectedId) {
         return;
@@ -107,7 +115,7 @@ const markSent = () => {
 
     router.post(
         storeSend(teamSlug.value).url,
-        { congregation_id: props.selectedId, month: props.month },
+        { congregation_id: props.selectedId, month: props.month, channel: channel.value },
         {
             preserveScroll: true,
             onStart: () => (processing.value = true),
@@ -230,6 +238,31 @@ const sendStatusVariant = (status: string) => {
                             data-test="compose-text"
                         ></textarea>
 
+                        <div class="flex flex-wrap items-center gap-2" data-test="channel-selector">
+                            <Button
+                                :variant="channel === 'manual' ? 'default' : 'outline'"
+                                size="sm"
+                                data-test="channel-manual"
+                                @click="channel = 'manual'"
+                            >
+                                {{ t('app.public_talks.exchange.channel_manual') }}
+                            </Button>
+
+                            <Button
+                                :variant="channel === 'whatsapp' ? 'default' : 'outline'"
+                                size="sm"
+                                :disabled="!whatsappAvailable"
+                                data-test="channel-whatsapp"
+                                @click="channel = 'whatsapp'"
+                            >
+                                {{ t('app.public_talks.exchange.channel_whatsapp') }}
+                            </Button>
+
+                            <span v-if="!whatsappAvailable" class="text-xs text-muted-foreground">
+                                {{ t('app.public_talks.exchange.channel_whatsapp_unavailable') }}
+                            </span>
+                        </div>
+
                         <div class="flex gap-2">
                             <Button variant="outline" data-test="copy-text" @click="copyText">
                                 <Check v-if="copied" class="size-4" />
@@ -243,7 +276,7 @@ const sendStatusVariant = (status: string) => {
                                 @click="markSent"
                             >
                                 <Send class="size-4" />
-                                {{ t('app.public_talks.exchange.mark_sent') }}
+                                {{ channel === 'whatsapp' ? t('app.public_talks.exchange.send_whatsapp') : t('app.public_talks.exchange.mark_sent') }}
                             </Button>
                         </div>
                     </template>

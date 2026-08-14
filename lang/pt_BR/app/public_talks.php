@@ -47,6 +47,12 @@ return [
         ],
     ],
 
+    'outlines' => [
+        'search_placeholder' => 'Buscar por número ou título',
+        'empty' => 'Nenhum esboço encontrado',
+        'open_link' => 'Abrir esboço no site',
+    ],
+
     'setup' => [
         'title' => 'Configurar discursos públicos',
         'congregation_title' => 'Congregação da casa',
@@ -154,6 +160,10 @@ return [
         'copy' => 'Copiar texto',
         'copied' => 'Texto copiado!',
         'mark_sent' => 'Marcar como enviado',
+        'channel_manual' => 'Manual',
+        'channel_whatsapp' => 'WhatsApp',
+        'channel_whatsapp_unavailable' => 'WhatsApp não configurado para esta equipe.',
+        'send_whatsapp' => 'Enviar via WhatsApp',
         'sends_title' => 'Envios deste convite',
         'sends_empty' => 'Nenhum envio registrado neste mês.',
         'sent_at' => 'Enviado em :date',
@@ -232,6 +242,12 @@ return [
             'thanks_description' => 'A congregação :home vai analisar e confirmar com vocês. Obrigado!',
             'summary_heading' => 'Resposta recebida pelo portal:',
         ],
+    ],
+
+    'notifications' => [
+        'congregation_at_time' => ':name, às :time',
+        'outline_line' => 'nº :number — :title',
+        'reference_fallback' => 'O esboço é o do catálogo — qualquer dúvida, fale com o coordenador.',
     ],
 
     'weekdays' => [

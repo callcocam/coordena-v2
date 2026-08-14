@@ -30,6 +30,7 @@ import {
     update as updateCoordinator,
 } from '@/routes/public-talks/coordinators';
 import type { CoordinatorItem, CoordinatorRole } from '@/types';
+import PhoneInput from '@whatsapp-cloud/components/PhoneInput/PhoneInput.vue';
 
 type Props = {
     coordinators: CoordinatorItem[];
@@ -223,7 +224,7 @@ const roleLabel = (role: CoordinatorRole): string =>
                         <Label for="coordinator-phone">{{
                             t('app.public_talks.coordinators.phone_label')
                         }}</Label>
-                        <Input id="coordinator-phone" v-model="form.phone" />
+                        <PhoneInput id="coordinator-phone" v-model="form.phone" />
                         <InputError :message="errors.phone" />
                     </div>
                     <div class="grid gap-2">

@@ -124,6 +124,23 @@ test('a busy speaker is offered as unavailable in the schedule payload', functio
         );
 });
 
+test('the outline catalog exposes the reference url for the picker', function () {
+    [$user, $team] = scheduleReadyTeam();
+
+    $outline = PublicTalkOutline::factory()->create([
+        'number' => 1,
+        'reference_url' => 'https://example.org/esboco-1',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('public-talks.schedule', ['current_team' => $team->slug]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('publicTalks/Schedule')
+            ->where('outlines.0.id', $outline->id)
+            ->where('outlines.0.reference_url', 'https://example.org/esboco-1'),
+        );
+});
+
 test('a home slot accepts a speaker from the home acervo', function () {
     [$user, $team, $congregation] = scheduleReadyTeam();
 
