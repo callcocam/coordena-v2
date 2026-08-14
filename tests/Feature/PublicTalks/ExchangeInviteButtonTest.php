@@ -158,6 +158,35 @@ test('"Este mês não" recusa o envio e passa o MESMO convite para a próxima co
     Queue::assertPushed(SendExchangeInvite::class, fn (SendExchangeInvite $job) => $job->send->is($nextSend));
 });
 
+test('resposta interactive list_reply do sandbox também aceita o convite', function () {
+    [, $team, $partner] = inviteButtonTeam();
+
+    $send = inviteButtonSend($team, $partner);
+
+    $message = WhatsAppInboundMessage::query()->create([
+        'wa_id' => '5551977776666',
+        'wamid' => 'wamid.REPLY',
+        'type' => 'interactive',
+        'text' => null,
+        'context_id' => 'wamid.OPENER',
+        'payload' => [
+            'type' => 'interactive',
+            'interactive' => ['type' => 'list_reply', 'list_reply' => ['id' => 'opt_0', 'title' => 'Sim, vamos combinar']],
+        ],
+        'status' => WhatsAppInboundMessage::STATUS_RECEIVED,
+    ]);
+
+    $client = Mockery::mock(CloudApiClient::class);
+    $client->shouldReceive('sendSessionText')->once()->andReturn(SendResult::sent('cloud', 'wamid.SESSION'));
+    $client->shouldReceive('sendTemplate')->once()->andReturn(SendResult::sent('cloud', 'wamid.ALERT'));
+    WhatsApp::shouldReceive('for')->andReturn($client);
+
+    app(InboundDispatcher::class)->dispatch($message);
+
+    expect($send->refresh()->status)->toBe(ExchangeInviteSendStatus::Accepted)
+        ->and($send->accepted_at)->not->toBeNull();
+});
+
 test('texto livre com convite pendente cai na mesa sem mudar o estado do envio', function () {
     [, $team, $partner] = inviteButtonTeam();
 

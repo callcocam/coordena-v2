@@ -207,7 +207,8 @@ class ExchangeInviteButtonHandler implements InboundHandler
 
     /**
      * The tapped button label: template quick replies come as `type: button`,
-     * interactive replies as `interactive.button_reply`.
+     * interactive replies as `interactive.button_reply` and the sandbox
+     * renders quick replies as `interactive.list_reply`.
      */
     protected function buttonText(WhatsAppInboundMessage $message): ?string
     {
@@ -215,6 +216,7 @@ class ExchangeInviteButtonHandler implements InboundHandler
 
         $text = $payload['button']['text']
             ?? $payload['interactive']['button_reply']['title']
+            ?? $payload['interactive']['list_reply']['title']
             ?? null;
 
         return is_string($text) && $text !== '' ? $text : null;
