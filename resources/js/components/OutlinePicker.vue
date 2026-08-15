@@ -16,6 +16,7 @@ import type { OutlineOption } from '@/types';
 type Props = {
     outlines: OutlineOption[];
     multiple?: boolean;
+    popover?: boolean;
     modelValue?: string | null;
     selectedIds?: string[];
     preparedIds?: string[];
@@ -25,6 +26,7 @@ type Props = {
 
 const props = withDefaults(defineProps<Props>(), {
     multiple: false,
+    popover: false,
     modelValue: null,
     selectedIds: () => [],
     preparedIds: () => [],
@@ -79,6 +81,16 @@ const isSelected = (outline: OutlineOption): boolean =>
 const outlineLabel = (outline: OutlineOption): string =>
     `nº ${outline.number} · ${outline.title}`;
 
+const triggerLabel = computed<string>(() => {
+    if (props.multiple) {
+        return props.placeholder;
+    }
+
+    return selectedOutline.value
+        ? outlineLabel(selectedOutline.value)
+        : props.placeholder;
+});
+
 const pick = (outline: OutlineOption) => {
     if (props.multiple) {
         emit('toggle', outline.id);
@@ -92,7 +104,11 @@ const pick = (outline: OutlineOption) => {
 </script>
 
 <template>
-    <div v-if="props.multiple" class="grid gap-2" :data-test="props.dataTest">
+    <div
+        v-if="props.multiple && !props.popover"
+        class="grid gap-2"
+        :data-test="props.dataTest"
+    >
         <div class="relative">
             <Search
                 class="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
@@ -149,12 +165,15 @@ const pick = (outline: OutlineOption) => {
                 class="w-full justify-between font-normal"
                 :data-test="props.dataTest"
             >
-                <span class="truncate" :class="{ 'text-muted-foreground': !selectedOutline }">
-                    {{
-                        selectedOutline
-                            ? outlineLabel(selectedOutline)
-                            : props.placeholder
-                    }}
+                <span
+                    class="truncate"
+                    :class="{
+                        'text-muted-foreground': props.multiple
+                            ? props.selectedIds.length === 0
+                            : !selectedOutline,
+                    }"
+                >
+                    {{ triggerLabel }}
                 </span>
                 <ChevronsUpDown class="size-4 shrink-0 opacity-50" />
             </Button>
@@ -191,6 +210,11 @@ const pick = (outline: OutlineOption) => {
                     :data-test="`${props.dataTest}-item`"
                     @click="pick(outline)"
                 >
+                    <Checkbox
+                        v-if="props.multiple"
+                        class="pointer-events-none"
+                        :model-value="isSelected(outline)"
+                    />
                     <span class="text-muted-foreground">
                         {{ outline.number }}.
                     </span>

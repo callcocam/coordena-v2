@@ -45,7 +45,7 @@ class SpeakerAvailability
 
         return ! ExchangeOffer::query()
             ->where('speaker_id', $speaker->id)
-            ->whereIn('status', [ExchangeOfferStatus::Selected, ExchangeOfferStatus::Confirmed])
+            ->whereIn('status', [ExchangeOfferStatus::Selected, ExchangeOfferStatus::Accepted, ExchangeOfferStatus::Confirmed])
             ->where(function ($query) use ($start, $end) {
                 $query->whereBetween('target_date', [$start, $end])
                     ->orWhere(function ($query) use ($start) {

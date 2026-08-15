@@ -21,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property string $direction
  * @property string $speaker_id
  * @property Carbon|null $target_date
+ * @property string|null $chosen_outline_id
  * @property ExchangeOfferStatus $status
  * @property string|null $source_message_id
  * @property string|null $created_by_id
@@ -30,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @property-read Speaker $speaker
  * @property-read ExchangeMessage|null $sourceMessage
  * @property-read User|null $createdBy
+ * @property-read PublicTalkOutline|null $chosenOutline
  * @property-read Collection<int, PublicTalkOutline> $outlines
  */
 #[Fillable([
@@ -37,6 +39,7 @@ use Illuminate\Support\Carbon;
     'direction',
     'speaker_id',
     'target_date',
+    'chosen_outline_id',
     'status',
     'source_message_id',
     'created_by_id',
@@ -97,6 +100,16 @@ class ExchangeOffer extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_id');
+    }
+
+    /**
+     * Get the outline chosen by our coordinator for this offer, when any.
+     *
+     * @return BelongsTo<PublicTalkOutline, $this>
+     */
+    public function chosenOutline(): BelongsTo
+    {
+        return $this->belongsTo(PublicTalkOutline::class, 'chosen_outline_id');
     }
 
     /**

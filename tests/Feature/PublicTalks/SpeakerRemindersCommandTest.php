@@ -1,10 +1,13 @@
 <?php
 
 use App\Enums\SpeakerNotificationKind;
+use App\Enums\SpeakerNotificationStatus;
 use App\Enums\TalkAssignmentStatus;
+use App\Enums\TalkAssignmentType;
 use App\Jobs\SendSpeakerAssignmentNotification;
 use App\Models\Congregation;
 use App\Models\Coordinator;
+use App\Models\PublicTalkOutline;
 use App\Models\Speaker;
 use App\Models\TalkAssignment;
 use App\Models\Team;
@@ -31,16 +34,26 @@ function reminderAssignment(Team $team, Carbon $date): TalkAssignment
         'speaker_id' => Speaker::factory()->create([
             'congregation_id' => $team->home_congregation_id,
         ])->id,
+        'outline_id' => PublicTalkOutline::factory()->create()->id,
         'status' => TalkAssignmentStatus::Scheduled,
     ]);
+}
+
+function firstReminderDate(): Carbon
+{
+    return Carbon::today()->addDays((int) config('public_talks.reminders.speaker_days_before'));
+}
+
+function secondReminderDate(): Carbon
+{
+    return Carbon::today()->addDays((int) config('public_talks.reminders.speaker_second_days_before'));
 }
 
 test('queues the d-3 reminder once per home assignment', function () {
     Queue::fake();
 
     $team = reminderTeam();
-    $date = Carbon::today()->addDays((int) config('public_talks.reminders.speaker_days_before'));
-    $assignment = reminderAssignment($team, $date);
+    $assignment = reminderAssignment($team, firstReminderDate());
 
     $this->artisan('public-talks:send-speaker-reminders')->assertSuccessful();
 
@@ -53,23 +66,109 @@ test('queues the d-3 reminder once per home assignment', function () {
     expect($assignment->notifications()->where('kind', SpeakerNotificationKind::Reminder)->count())->toBe(1);
 });
 
-test('skips assignments outside the reminder date or without notifiable speaker', function () {
+test('queues reminders for outgoing and incoming assignments too', function () {
     Queue::fake();
 
     $team = reminderTeam();
-    $date = Carbon::today()->addDays((int) config('public_talks.reminders.speaker_days_before'));
+    $date = firstReminderDate();
 
-    reminderAssignment($team, $date->copy()->addWeek());
+    $outgoing = reminderAssignment($team, $date);
+    $outgoing->forceFill(['type' => TalkAssignmentType::Outgoing])->save();
 
-    $withoutPhone = reminderAssignment($team, $date);
-    $withoutPhone->speaker->forceFill(['phone' => null])->save();
+    $incoming = reminderAssignment($team, $date);
+    $incoming->forceFill(['type' => TalkAssignmentType::Incoming])->save();
+
+    $this->artisan('public-talks:send-speaker-reminders')->assertSuccessful();
+
+    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 2);
+    expect($outgoing->notifications()->where('kind', SpeakerNotificationKind::Reminder)->count())->toBe(1)
+        ->and($incoming->notifications()->where('kind', SpeakerNotificationKind::Reminder)->count())->toBe(1);
+});
+
+test('queues the d-1 reminder for talks still unconfirmed', function () {
+    Queue::fake();
+
+    $team = reminderTeam();
+    $assignment = reminderAssignment($team, secondReminderDate());
+
+    $this->artisan('public-talks:send-speaker-reminders')->assertSuccessful();
+
+    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 1);
+    expect($assignment->notifications()->where('kind', SpeakerNotificationKind::Reminder)->count())->toBe(1);
+});
+
+test('a reminder sent on a previous day does not block the d-1 reminder', function () {
+    Queue::fake();
+
+    $team = reminderTeam();
+    $assignment = reminderAssignment($team, secondReminderDate());
+
+    $assignment->notifications()->create([
+        'speaker_id' => $assignment->speaker_id,
+        'kind' => SpeakerNotificationKind::Reminder,
+        'status' => SpeakerNotificationStatus::Sent,
+        'sent_at' => now()->subDays(2),
+    ])->forceFill(['created_at' => now()->subDays(2)])->save();
+
+    $this->artisan('public-talks:send-speaker-reminders')->assertSuccessful();
+
+    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 1);
+    expect($assignment->notifications()->where('kind', SpeakerNotificationKind::Reminder)->count())->toBe(2);
+});
+
+test('a manual reminder sent today suppresses the automatic one', function () {
+    Queue::fake();
+
+    $team = reminderTeam();
+    $assignment = reminderAssignment($team, secondReminderDate());
+
+    $assignment->notifications()->create([
+        'speaker_id' => $assignment->speaker_id,
+        'kind' => SpeakerNotificationKind::Reminder,
+        'status' => SpeakerNotificationStatus::Sent,
+        'sent_at' => now(),
+    ]);
 
     $this->artisan('public-talks:send-speaker-reminders')->assertSuccessful();
 
     Queue::assertNothingPushed();
 });
 
-test('alerts the coordinator about unconfirmed talks on d-1, once per day', function () {
+test('confirmed and rescheduling talks receive no reminder', function () {
+    Queue::fake();
+
+    $team = reminderTeam();
+
+    reminderAssignment($team, firstReminderDate())
+        ->forceFill(['status' => TalkAssignmentStatus::Confirmed])->save();
+    reminderAssignment($team, secondReminderDate())
+        ->forceFill(['status' => TalkAssignmentStatus::NeedsReschedule])->save();
+
+    $this->artisan('public-talks:send-speaker-reminders')->assertSuccessful();
+
+    Queue::assertNothingPushed();
+});
+
+test('skips assignments outside the reminder dates or without notifiable speaker', function () {
+    Queue::fake();
+
+    $team = reminderTeam();
+    $date = firstReminderDate();
+
+    reminderAssignment($team, $date->copy()->addWeek());
+
+    $withoutPhone = reminderAssignment($team, $date);
+    $withoutPhone->speaker->forceFill(['phone' => null])->save();
+
+    $withoutOutline = reminderAssignment($team, secondReminderDate());
+    $withoutOutline->forceFill(['outline_id' => null])->save();
+
+    $this->artisan('public-talks:send-speaker-reminders')->assertSuccessful();
+
+    Queue::assertNothingPushed();
+});
+
+test('alerts the coordinator about unconfirmed talks on d-0, once per day', function () {
     Queue::fake();
 
     $team = reminderTeam();
@@ -86,7 +185,7 @@ test('alerts the coordinator about unconfirmed talks on d-1, once per day', func
     $this->artisan('public-talks:send-speaker-reminders')->assertSuccessful();
 });
 
-test('confirmed talks do not trigger the d-1 alert', function () {
+test('confirmed talks do not trigger the d-0 alert', function () {
     Queue::fake();
 
     $team = reminderTeam();
@@ -102,8 +201,8 @@ test('dry-run neither queues nor creates notifications', function () {
     Queue::fake();
 
     $team = reminderTeam();
-    $date = Carbon::today()->addDays((int) config('public_talks.reminders.speaker_days_before'));
-    $assignment = reminderAssignment($team, $date);
+    reminderAssignment($team, firstReminderDate());
+    $assignment = reminderAssignment($team, secondReminderDate());
 
     $this->artisan('public-talks:send-speaker-reminders', ['--dry-run' => true])->assertSuccessful();
 

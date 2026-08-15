@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Route;
 Route::inertia('/', 'Welcome')->name('home');
 Route::inertia('/termos', 'legal/Terms')->name('legal.terms');
 Route::inertia('/privacidade', 'legal/Privacy')->name('legal.privacy');
+Route::inertia('/ajuda/discursos-publicos', 'help/PublicTalks')->name('help.public-talks');
 
 Route::middleware('throttle:20,1')->group(function () {
     Route::get('permuta/{portal_token}', [ExchangePortalController::class, 'show'])->name('exchange.portal');
@@ -61,6 +62,9 @@ Route::prefix('{current_team}')
         Route::post('discursos/permutas/envios/{send}/ofertas', [ExchangeOfferController::class, 'store'])->name('public-talks.exchange.offers.store');
         Route::put('discursos/permutas/envios/{send}/ofertas/{offer}', [ExchangeOfferController::class, 'update'])->name('public-talks.exchange.offers.update');
         Route::delete('discursos/permutas/envios/{send}/ofertas/{offer}', [ExchangeOfferController::class, 'destroy'])->name('public-talks.exchange.offers.destroy');
+        Route::post('discursos/permutas/envios/{send}/ofertas/{offer}/tema', [ExchangeOfferController::class, 'chooseOutline'])->name('public-talks.exchange.offers.outline');
+        Route::post('discursos/permutas/envios/{send}/ofertas/{offer}/aceitar', [ExchangeOfferController::class, 'accept'])->name('public-talks.exchange.offers.accept');
+        Route::post('discursos/permutas/envios/{send}/ofertas/{offer}/recusar', [ExchangeOfferController::class, 'decline'])->name('public-talks.exchange.offers.decline');
 
         Route::post('acervo/{congregation}/oradores', [SpeakerController::class, 'store'])->name('acervo.speakers.store');
         Route::put('acervo/{congregation}/oradores/{speaker}', [SpeakerController::class, 'update'])->name('acervo.speakers.update');

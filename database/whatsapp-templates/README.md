@@ -23,8 +23,8 @@ Antes de criar um botão novo, confira esta tabela e registre o dono aqui.
 
 | Rótulo | Dono (fluxo) | Templates |
 | --- | --- | --- |
-| `Tudo certo` | Confirmação do orador | `coordena_talk_assignment`, `coordena_talk_reminder` |
-| `Preciso remarcar` | Confirmação do orador | `coordena_talk_assignment`, `coordena_talk_reminder` |
+| `Tudo certo` | Confirmação do orador | `coordena_talk_assignment`, `coordena_talk_assignment_visitor`, `coordena_talk_reminder`, `coordena_talk_reminder_out`, `coordena_talk_reminder_visitor` |
+| `Preciso remarcar` | Confirmação do orador | `coordena_talk_assignment`, `coordena_talk_assignment_visitor`, `coordena_talk_reminder`, `coordena_talk_reminder_out`, `coordena_talk_reminder_visitor` |
 | `Sim, vamos combinar` | Convite de troca (parceira) | `coordena_exchange_invite` |
 | `Podemos ajudar` | Convite de troca (parceira) | `coordena_exchange_help` |
 | `Este mês não` | Convite de troca (parceira) | `coordena_exchange_invite`, `coordena_exchange_help` |

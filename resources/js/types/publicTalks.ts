@@ -13,10 +13,18 @@ export type ScheduleWeek = {
         | 'notified'
         | 'confirmed'
         | 'needs_reschedule';
-    speaker: { id: string; name: string } | null;
+    speaker: { id: string; name: string; phone: string | null } | null;
     outline: { id: string; number: number; title: string } | null;
     counterpart: string | null;
     editable: boolean;
+    notifiable: boolean;
+    notification: ScheduleNotification | null;
+};
+
+export type ScheduleNotification = {
+    kind: 'assignment' | 'reminder';
+    status: 'pending' | 'sent' | 'failed' | 'confirmed' | 'reschedule_requested';
+    sent_at: string | null;
 };
 
 export type ScheduleSpeaker = {

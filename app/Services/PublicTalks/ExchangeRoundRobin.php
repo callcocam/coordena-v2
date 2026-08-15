@@ -21,6 +21,16 @@ use Illuminate\Support\Carbon;
 class ExchangeRoundRobin
 {
     /**
+     * Send statuses that still hold a congregation for their invite.
+     */
+    protected const LIVE_STATUSES = [
+        ExchangeInviteSendStatus::Pending,
+        ExchangeInviteSendStatus::Sent,
+        ExchangeInviteSendStatus::Accepted,
+        ExchangeInviteSendStatus::Answered,
+    ];
+
+    /**
      * The suggested next partner congregation for the invite, when any.
      */
     public function nextFor(ExchangeInvite $invite): ?Congregation
@@ -30,6 +40,11 @@ class ExchangeRoundRobin
 
     /**
      * Every eligible partner, least recently invited first.
+     *
+     * Partners with a live send on another month of the horizon are pushed
+     * out so each month suggests a different congregation; when every
+     * eligible partner is already engaged elsewhere, the full rotation is
+     * kept as a fallback instead of going silent.
      *
      * @return Collection<int, Congregation>
      */
@@ -43,17 +58,12 @@ class ExchangeRoundRobin
         }
 
         $liveCongregationIds = $invite->sends()
-            ->whereIn('status', [
-                ExchangeInviteSendStatus::Pending,
-                ExchangeInviteSendStatus::Sent,
-                ExchangeInviteSendStatus::Accepted,
-                ExchangeInviteSendStatus::Answered,
-            ])
+            ->whereIn('status', self::LIVE_STATUSES)
             ->pluck('congregation_id');
 
         $lastInvitedAt = $this->lastInvitedAtByCongregation($invite);
 
-        return Congregation::query()
+        $eligible = Congregation::query()
             ->ownedBy($owner->id)
             ->where('exchange_opt', ExchangeOpt::OptedIn)
             ->whereKeyNot($liveCongregationIds->all())
@@ -68,6 +78,35 @@ class ExchangeRoundRobin
             ->get()
             ->sortBy(fn (Congregation $congregation) => $lastInvitedAt[$congregation->id] ?? '')
             ->values();
+
+        $engagedElsewhere = $this->liveElsewhereCongregationIds($invite);
+
+        $available = $eligible->reject(
+            fn (Congregation $congregation): bool => in_array($congregation->id, $engagedElsewhere, true)
+        )->values();
+
+        return $available->isNotEmpty() ? $available : $eligible;
+    }
+
+    /**
+     * Congregations with a live send on another invite of the team within
+     * the schedule horizon.
+     *
+     * @return list<string>
+     */
+    protected function liveElsewhereCongregationIds(ExchangeInvite $invite): array
+    {
+        $horizonStart = Carbon::today()->startOfMonth();
+        $horizonEnd = $horizonStart->copy()->addMonths(ScheduleHorizon::MONTHS_AHEAD - 1);
+
+        return ExchangeInviteSend::query()
+            ->whereIn('status', self::LIVE_STATUSES)
+            ->whereHas('invite', fn ($query) => $query
+                ->where('team_id', $invite->team_id)
+                ->whereKeyNot($invite->id)
+                ->whereBetween('month', [$horizonStart, $horizonEnd]))
+            ->pluck('congregation_id')
+            ->all();
     }
 
     /**

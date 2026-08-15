@@ -119,3 +119,44 @@
   (sempre como **rascunho** para revisão humana na mesa de trabalho — nunca confirmação automática).
 - Fluxo guiado data-por-data por chat para a congregação convidada (o v1 tentou; reavaliar só se o portal não bastar).
 - Antecedências e limites configuráveis por time (fase 6 usa config global).
+
+## Melhorias 4 e 5 — Portal bidirecional + Mesa de montagem (planejadas em 2026-08-14)
+
+Regra de domínio fixada pelo dono: **quem RECEBE o orador escolhe o tema**, dentre os temas que
+o orador profere. Semana é a unidade central do portal; uma única submissão vira proposta na
+mesa; o coordenador local escolhe temas (incoming), aceita/recusa por semana (balanço pode ser
+assimétrico) e confirma. Detalhes e decisões completas nos próprios planos:
+
+- `melhoria-4-portal-bidirecional.md` — portal por semana com os dois lados: eles oferecem
+  orador (com LISTA de temas) para as nossas semanas abertas E escolhem orador nosso + semana
+  deles + tema da nossa lista. Executar primeiro.
+- `melhoria-5-mesa-montagem.md` — mesa: escolher tema dos incoming, aceitar/recusar por
+  semana, confirmar → designações + notificações; recusadas voltam ao round-robin; criar
+  oferta manual a partir de mensagem WhatsApp livre. Executar depois da 4.
+- `melhoria-7-portal-oradores-cadastrados-e-tags-de-temas.md` — portal lista os oradores já
+  cadastrados da parceira (combobox creatable, cadastro silencioso), pré-preenche os temas do
+  orador selecionado e usa tags-input com busca sobre o catálogo completo de esboços
+  (chips com limite + expandir; mobile-first). Executar depois da 4.
+
+## Melhoria 8 — Tela da programação enriquecida (concluída em 2026-08-14)
+
+- `melhoria-8-tela-programacao-enriquecida.md` — cards da programação mostram congregação
+  parceira + orador em incoming/outgoing (quem sai e para onde), botão de mensagem WhatsApp
+  no card (designação/pedir confirmação, reutilizando `SpeakerNotificationKind` e o inbound
+  `SpeakerButtonHandler` já existentes), esconder "Convidar congregação" quando o mês está
+  completo, e fix da pluralização do badge de pendências. Executar em chat separado.
+
+## Melhoria 9 — Portal: arranjo fechado + ajuda (planejada em 2026-08-14)
+
+- `melhoria-9-portal-arranjo-fechado-e-ajuda.md` — portal da permuta mostra o arranjo da
+  troca (ofertas + status da mesa) até o link expirar, temas proferidos recentemente na
+  congregação convidada (pelo que passou pelo Coordena), dicas rápidas e link para a nova
+  página de ajuda pública `/ajuda/discursos-publicos` (estrutura por área, pois o Coordena
+  terá outras atividades). Executar em chat separado.
+
+## Melhoria 6 — Apresentação inline + rodízio por mês (planejada em 2026-08-14)
+
+- `melhoria-6-apresentacao-inline-e-rodizio-por-mes.md` — botão "Enviar apresentação" em cada
+  item da lista "Aguardando apresentação" da tela de troca (sem ir ao acervo) e regra de
+  rodízio ciente do horizonte: congregação com convite vivo no mês X não é candidata no mês
+  X+1 (com fallback quando não sobra candidata). Independente das melhorias 4/5.

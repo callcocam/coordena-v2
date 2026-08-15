@@ -206,8 +206,26 @@ return [
             'category' => 'utility',
             'params' => ['speaker', 'date', 'congregation', 'outline', 'reference'],
         ],
+        'talk_assignment_visitor' => [
+            'name' => 'coordena_talk_assignment_visitor',
+            'language' => 'pt_BR',
+            'category' => 'utility',
+            'params' => ['speaker', 'date', 'congregation', 'outline', 'reference'],
+        ],
         'talk_reminder' => [
             'name' => 'coordena_talk_reminder',
+            'language' => 'pt_BR',
+            'category' => 'utility',
+            'params' => ['speaker', 'date', 'congregation', 'outline'],
+        ],
+        'talk_reminder_out' => [
+            'name' => 'coordena_talk_reminder_out',
+            'language' => 'pt_BR',
+            'category' => 'utility',
+            'params' => ['speaker', 'date', 'congregation', 'outline'],
+        ],
+        'talk_reminder_visitor' => [
+            'name' => 'coordena_talk_reminder_visitor',
             'language' => 'pt_BR',
             'category' => 'utility',
             'params' => ['speaker', 'date', 'congregation', 'outline'],

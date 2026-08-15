@@ -46,6 +46,11 @@ class SaveExchangeOfferRequest extends FormRequest
             'target_date' => ['nullable', 'date'],
             'outline_ids' => ['array'],
             'outline_ids.*' => ['string', Rule::exists('public_talk_outlines', 'id')],
+            'source_message_id' => [
+                'nullable',
+                'string',
+                Rule::exists('exchange_messages', 'id')->where('invite_send_id', $send->id),
+            ],
         ];
     }
 

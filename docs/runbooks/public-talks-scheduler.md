@@ -7,7 +7,7 @@ Agendado em `routes/console.php` (timezone de `config('app.timezone')`):
 | Horário | Comando | Efeito |
 | --- | --- | --- |
 | 05:00 | `public-talks:ensure-horizon` | Avança o horizonte de convites de permuta (convite do mês novo nasce sozinho). |
-| 08:00 | `public-talks:send-speaker-reminders` | Lembrete D-3 ao orador + pendências D-1 ao coordenador responsável. |
+| 08:00 | `public-talks:send-speaker-reminders` | Lembrete D-3 ao orador (qualquer direção, visitante incluso), repique D-1 a quem não confirmou (`PUBLIC_TALKS_SPEAKER_SECOND_REMINDER_DAYS`, default 1) + pendências D-0 ao coordenador responsável (`PUBLIC_TALKS_PENDING_ALERT_DAYS`, default 0). Máximo de um lembrete automático por assignment por dia; lembrete manual no dia suprime o automático. |
 | 09:00 | `public-talks:nudge-pending-invite-sends` | 1 reengate único por send `sent` sem resposta (≥ `PUBLIC_TALKS_NUDGE_AFTER_DAYS`, default 4) e expiração + aviso ao responsável (≥ `PUBLIC_TALKS_EXPIRE_AFTER_DAYS`, default 10). O envio à próxima congregação continua manual. |
 
 Todos usam `withoutOverlapping()->onOneServer()`.

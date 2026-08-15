@@ -3,6 +3,7 @@
 namespace App\Services\PublicTalks;
 
 use App\Enums\SpeakerNotificationKind;
+use App\Enums\TalkAssignmentType;
 use App\Models\TalkAssignment;
 use App\Support\Phone;
 use RuntimeException;
@@ -18,6 +19,26 @@ use RuntimeException;
 class TalkAssignmentMessage
 {
     /**
+     * The config key of the template for this kind + assignment direction.
+     * The direction lives on the assignment, so a single `kind` pair maps to
+     * distinct copies: our speaker at home, our speaker going out on a troca,
+     * and the visiting speaker coming to us.
+     */
+    public function templateKey(TalkAssignment $assignment, SpeakerNotificationKind $kind): string
+    {
+        return match ($kind) {
+            SpeakerNotificationKind::Assignment => $assignment->type === TalkAssignmentType::Incoming
+                ? 'talk_assignment_visitor'
+                : 'talk_assignment',
+            SpeakerNotificationKind::Reminder => match ($assignment->type) {
+                TalkAssignmentType::Incoming => 'talk_reminder_visitor',
+                TalkAssignmentType::Outgoing => 'talk_reminder_out',
+                TalkAssignmentType::Home => 'talk_reminder',
+            },
+        };
+    }
+
+    /**
      * The template variables keyed by the names in the template's `params`
      * config (same order as {{1}}..{{n}}).
      *
@@ -32,7 +53,9 @@ class TalkAssignmentMessage
             throw new RuntimeException('Assignment must have a speaker and an outline to be notified.');
         }
 
-        $congregation = $assignment->team->homeCongregation;
+        $congregation = $assignment->type === TalkAssignmentType::Outgoing
+            ? $assignment->counterpartCongregation
+            : $assignment->team->homeCongregation;
         $congregationLine = $congregation?->name ?? $assignment->team->name;
 
         if ($congregation?->meeting_time !== null) {
@@ -69,7 +92,7 @@ class TalkAssignmentMessage
      */
     public function text(TalkAssignment $assignment, SpeakerNotificationKind $kind): string
     {
-        $body = $this->templateBody($this->templateName($kind));
+        $body = $this->templateBody($this->templateName($assignment, $kind));
 
         foreach (array_values($this->params($assignment, $kind)) as $index => $param) {
             $body = str_replace('{{'.($index + 1).'}}', $param, $body);
@@ -93,14 +116,15 @@ class TalkAssignmentMessage
     }
 
     /**
-     * The approved template name configured for this notification kind.
+     * The approved template name configured for this kind + direction.
      */
-    public function templateName(SpeakerNotificationKind $kind): string
+    public function templateName(TalkAssignment $assignment, SpeakerNotificationKind $kind): string
     {
-        $name = config('whatsapp-cloud.templates.'.$kind->templateKey().'.name');
+        $key = $this->templateKey($assignment, $kind);
+        $name = config('whatsapp-cloud.templates.'.$key.'.name');
 
         if (! is_string($name) || $name === '') {
-            throw new RuntimeException("Template for kind [{$kind->value}] is not configured.");
+            throw new RuntimeException("Template [{$key}] is not configured.");
         }
 
         return $name;

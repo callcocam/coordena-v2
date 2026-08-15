@@ -11,7 +11,7 @@ use App\Models\ExchangeOffer;
 use App\Models\PublicTalkOutline;
 use App\Models\Speaker;
 use App\Models\TalkAssignment;
-use App\Services\PublicTalks\ExchangeConfirmer;
+use App\Services\PublicTalks\ExchangeAssembler;
 use App\Services\PublicTalks\ExchangeInviteManager;
 use App\Services\PublicTalks\SpeakerAvailability;
 use Illuminate\Http\RedirectResponse;
@@ -24,7 +24,7 @@ class ExchangeSendController extends Controller
 {
     public function __construct(
         protected ExchangeInviteManager $manager,
-        protected ExchangeConfirmer $confirmer,
+        protected ExchangeAssembler $assembler,
         protected SpeakerAvailability $availability,
     ) {}
 
@@ -51,6 +51,8 @@ class ExchangeSendController extends Controller
                 'congregation' => [
                     'id' => $send->congregation->id,
                     'name' => $send->congregation->name,
+                    'meeting_weekday' => $send->congregation->meeting_weekday,
+                    'meeting_time' => $send->congregation->meeting_time,
                 ],
             ],
             'offers' => $this->offersFor($send),
@@ -128,7 +130,8 @@ class ExchangeSendController extends Controller
     }
 
     /**
-     * Confirm the selected offers and log the summary as an outbound message.
+     * Close the package: confirm the accepted offers, notify our outgoing
+     * speakers and send the partner coordinator the summary.
      */
     public function confirm(Request $request, string $current_team, ExchangeInviteSend $send): RedirectResponse
     {
@@ -136,18 +139,7 @@ class ExchangeSendController extends Controller
 
         Gate::authorize('update', $send->invite);
 
-        $validated = $request->validate([
-            'offers' => ['required', 'array', 'min:1'],
-            'offers.*' => ['string'],
-        ]);
-
-        $summary = $this->confirmer->confirm($send, $validated['offers'], $request->user());
-
-        $send->messages()->create([
-            'direction' => 'outbound',
-            'channel' => 'manual',
-            'body' => $summary,
-        ]);
+        $this->assembler->confirm($send, $request->user());
 
         return back();
     }
@@ -176,9 +168,12 @@ class ExchangeSendController extends Controller
                 'direction' => $offer->direction,
                 'status' => $offer->status->value,
                 'target_date' => $offer->target_date?->toDateString(),
+                'chosen_outline_id' => $offer->chosen_outline_id,
+                'source_message_id' => $offer->source_message_id,
                 'speaker' => [
                     'id' => $offer->speaker->id,
                     'name' => $offer->speaker->name,
+                    'phone' => $offer->speaker->phone,
                 ],
                 'outlines' => $offer->outlines
                     ->map(fn (PublicTalkOutline $outline): array => [

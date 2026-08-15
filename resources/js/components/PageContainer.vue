@@ -36,31 +36,36 @@ const { t } = useT();
     >
         <div
             v-if="title || backHref || $slots.heading || $slots.actions"
-            class="flex flex-wrap items-start gap-2"
+            class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
         >
-            <Button
-                v-if="backHref"
-                variant="ghost"
-                size="icon"
-                class="shrink-0"
-                as-child
-                data-test="back-button"
-            >
-                <Link :href="backHref">
-                    <ArrowLeft class="size-5" />
-                    <span class="sr-only">{{ t('app.common.back') }}</span>
-                </Link>
-            </Button>
-            <div class="min-w-0 flex-1">
-                <slot name="heading">
-                    <Heading
-                        v-if="title"
-                        :title="title"
-                        :description="description"
-                    />
-                </slot>
+            <div class="flex min-w-0 items-start gap-2">
+                <Button
+                    v-if="backHref"
+                    variant="ghost"
+                    size="icon"
+                    class="shrink-0"
+                    as-child
+                    data-test="back-button"
+                >
+                    <Link :href="backHref">
+                        <ArrowLeft class="size-5" />
+                        <span class="sr-only">{{ t('app.common.back') }}</span>
+                    </Link>
+                </Button>
+                <div class="min-w-0 flex-1">
+                    <slot name="heading">
+                        <Heading
+                            v-if="title"
+                            :title="title"
+                            :description="description"
+                        />
+                    </slot>
+                </div>
             </div>
-            <div v-if="$slots.actions" class="flex shrink-0 items-center gap-2">
+            <div
+                v-if="$slots.actions"
+                class="flex shrink-0 flex-wrap items-center gap-2"
+            >
                 <slot name="actions" />
             </div>
         </div>

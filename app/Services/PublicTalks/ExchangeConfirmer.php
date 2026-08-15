@@ -76,7 +76,7 @@ class ExchangeConfirmer
      *
      * @throws ValidationException
      */
-    protected function validateOffer(ExchangeOffer $offer): void
+    public function validateOffer(ExchangeOffer $offer): void
     {
         $month = $offer->inviteSend->invite->month;
 
@@ -112,7 +112,7 @@ class ExchangeConfirmer
      *
      * @throws ValidationException
      */
-    protected function bookIncoming(ExchangeOffer $offer, ExchangeInviteSend $send, ?User $user): void
+    public function bookIncoming(ExchangeOffer $offer, ExchangeInviteSend $send, ?User $user): TalkAssignment
     {
         $week = TalkAssignment::query()
             ->where('team_id', $send->invite->team_id)
@@ -131,33 +131,45 @@ class ExchangeConfirmer
         $week->forceFill([
             'type' => TalkAssignmentType::Incoming,
             'speaker_id' => $offer->speaker_id,
-            'outline_id' => $offer->outlines->first()?->id,
+            'outline_id' => $offer->chosen_outline_id ?? $offer->outlines->first()?->id,
             'counterpart_congregation_id' => $send->congregation_id,
             'status' => TalkAssignmentStatus::Scheduled,
             'created_by_id' => $week->created_by_id ?? $user?->id,
         ])->save();
+
+        return $week;
     }
 
     /**
      * Register that one of our speakers goes out to the partner congregation.
      */
-    protected function bookOutgoing(ExchangeOffer $offer, ExchangeInviteSend $send, ?User $user): void
+    public function bookOutgoing(ExchangeOffer $offer, ExchangeInviteSend $send, ?User $user): TalkAssignment
     {
-        $horizon = app(ScheduleHorizon::class);
-        $weekStart = $offer->target_date->copy()->startOfWeek(Carbon::MONDAY);
-        $date = $horizon->meetingDateFor($weekStart, $send->congregation->meeting_weekday);
+        $date = $this->outgoingDateFor($offer, $send);
 
-        TalkAssignment::query()->updateOrCreate([
+        return TalkAssignment::query()->updateOrCreate([
             'team_id' => $send->invite->team_id,
             'date' => $date->toDateString(),
             'type' => TalkAssignmentType::Outgoing,
             'speaker_id' => $offer->speaker_id,
         ], [
-            'outline_id' => $offer->outlines->first()?->id,
+            'outline_id' => $offer->chosen_outline_id ?? $offer->outlines->first()?->id,
             'counterpart_congregation_id' => $send->congregation_id,
             'status' => TalkAssignmentStatus::Scheduled,
             'created_by_id' => $user?->id,
         ]);
+    }
+
+    /**
+     * The concrete meeting date at the partner congregation for an outgoing
+     * offer: the offered week + the partner's `meeting_weekday`.
+     */
+    public function outgoingDateFor(ExchangeOffer $offer, ExchangeInviteSend $send): Carbon
+    {
+        $horizon = app(ScheduleHorizon::class);
+        $weekStart = $offer->target_date->copy()->startOfWeek(Carbon::MONDAY);
+
+        return $horizon->meetingDateFor($weekStart, $send->congregation->meeting_weekday);
     }
 
     /**

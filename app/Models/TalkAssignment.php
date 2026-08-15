@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -35,6 +36,7 @@ use Illuminate\Support\Carbon;
  * @property-read Congregation|null $counterpartCongregation
  * @property-read User|null $createdBy
  * @property-read Collection<int, TalkAssignmentNotification> $notifications
+ * @property-read TalkAssignmentNotification|null $latestNotification
  */
 #[Fillable([
     'team_id',
@@ -135,5 +137,15 @@ class TalkAssignment extends Model
     public function notifications(): HasMany
     {
         return $this->hasMany(TalkAssignmentNotification::class);
+    }
+
+    /**
+     * Get the most recent notification sent for this assignment.
+     *
+     * @return HasOne<TalkAssignmentNotification, $this>
+     */
+    public function latestNotification(): HasOne
+    {
+        return $this->hasOne(TalkAssignmentNotification::class)->latestOfMany();
     }
 }

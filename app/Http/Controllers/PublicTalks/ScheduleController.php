@@ -59,6 +59,7 @@ class ScheduleController extends Controller
             'months' => $this->horizonMonths(),
             'weeks' => $this->weeksFor($team, $month, $canManage),
             'pendingCount' => $this->pendingCountFor($team, $month),
+            'monthComplete' => $this->monthCompleteFor($team, $month),
             'speakers' => $this->speakersFor($home, $month),
             'outlines' => $this->outlineCatalog(),
             'homeCongregation' => [
@@ -101,16 +102,25 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Queue the WhatsApp assignment notification for the slot's speaker.
-     * Re-sending is allowed: each call creates a fresh notification row.
+     * Queue the WhatsApp notification (assignment or reminder) for the slot's
+     * speaker. All directions are allowed — the template copy varies by type
+     * (local, quem sai, orador visitante), resolved per assignment by
+     * TalkAssignmentMessage. Re-sending is allowed: each call creates a fresh
+     * notification row.
      */
     public function notify(Request $request, string $current_team, TalkAssignment $assignment): RedirectResponse
     {
         $team = $request->user()->currentTeam;
 
-        abort_unless($assignment->team_id === $team->id && $assignment->type === TalkAssignmentType::Home, 404);
+        abort_unless($assignment->team_id === $team->id, 404);
 
         Gate::authorize('notify', $assignment);
+
+        $kind = SpeakerNotificationKind::tryFrom((string) $request->input('kind', SpeakerNotificationKind::Assignment->value));
+
+        if ($kind === null) {
+            return $this->notifyError(__('Tipo de notificação inválido.'));
+        }
 
         if ($assignment->speaker_id === null || $assignment->outline_id === null) {
             return $this->notifyError(__('Preencha orador e esboço antes de notificar.'));
@@ -124,7 +134,7 @@ class ScheduleController extends Controller
             return $this->notifyError(__('O WhatsApp do time não está pronto para envios pela API.'));
         }
 
-        SendSpeakerAssignmentNotification::queueFor($assignment, SpeakerNotificationKind::Assignment, $request->user());
+        SendSpeakerAssignmentNotification::queueFor($assignment, $kind, $request->user());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Notificação enviada ao orador.')]);
 
@@ -206,9 +216,10 @@ class ScheduleController extends Controller
         return TalkAssignment::query()
             ->where('team_id', $team->id)
             ->whereBetween('date', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])
-            ->with(['speaker:id,name,phone', 'outline:id,number,title', 'counterpartCongregation:id,name'])
+            ->with(['speaker:id,name,phone', 'outline:id,number,title', 'counterpartCongregation:id,name', 'latestNotification'])
             ->orderBy('date')
             ->get()
+            ->each(fn (TalkAssignment $assignment) => $assignment->setRelation('team', $team))
             ->map(fn (TalkAssignment $assignment): array => [
                 'id' => $assignment->id,
                 'date' => $assignment->date->toDateString(),
@@ -218,6 +229,7 @@ class ScheduleController extends Controller
                 'speaker' => $assignment->speaker === null ? null : [
                     'id' => $assignment->speaker->id,
                     'name' => $assignment->speaker->name,
+                    'phone' => $assignment->speaker->phone,
                 ],
                 'outline' => $assignment->outline === null ? null : [
                     'id' => $assignment->outline->id,
@@ -226,8 +238,45 @@ class ScheduleController extends Controller
                 ],
                 'counterpart' => $assignment->counterpartCongregation?->name,
                 'editable' => $canManage && $assignment->type === TalkAssignmentType::Home,
+                'notifiable' => $this->notifiable($assignment),
+                'notification' => $assignment->latestNotification === null ? null : [
+                    'kind' => $assignment->latestNotification->kind->value,
+                    'status' => $assignment->latestNotification->status->value,
+                    'sent_at' => $assignment->latestNotification->sent_at?->toDateString(),
+                ],
             ])
             ->all();
+    }
+
+    /**
+     * Whether the schedule can offer the WhatsApp notify action for the slot:
+     * speaker filled (any direction — the visitor is notified by us too),
+     * with a normalizable phone, and the team's WhatsApp API ready.
+     */
+    protected function notifiable(TalkAssignment $assignment): bool
+    {
+        return $assignment->speaker_id !== null
+            && $assignment->outline_id !== null
+            && Phone::normalize($assignment->speaker?->phone) !== null
+            && $assignment->team->canSendWhatsappApi()
+            && Gate::allows('notify', $assignment);
+    }
+
+    /**
+     * Whether every week of the month has been filled (no open slots left).
+     */
+    protected function monthCompleteFor(Team $team, Carbon $month): bool
+    {
+        return TalkAssignment::query()
+            ->where('team_id', $team->id)
+            ->whereBetween('date', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])
+            ->whereNotIn('status', [TalkAssignmentStatus::Open])
+            ->exists()
+            && ! TalkAssignment::query()
+                ->where('team_id', $team->id)
+                ->whereBetween('date', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])
+                ->where('status', TalkAssignmentStatus::Open)
+                ->exists();
     }
 
     /**

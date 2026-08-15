@@ -99,6 +99,49 @@ test('notify is blocked when the speaker has no valid phone', function () {
     expect($assignment->notifications()->count())->toBe(0);
 });
 
+test('notify accepts the reminder kind', function () {
+    Queue::fake();
+
+    [$user, $team, $congregation] = notifyReadyTeam();
+    $assignment = notifiableAssignment($team, $congregation);
+
+    $this->actingAs($user)
+        ->post(route('public-talks.schedule.notify', ['current_team' => $team->slug, 'assignment' => $assignment->id]), ['kind' => 'reminder'])
+        ->assertRedirect();
+
+    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 1);
+
+    expect($assignment->notifications()->first()->kind)->toBe(SpeakerNotificationKind::Reminder);
+});
+
+test('an outgoing assignment can be notified', function () {
+    Queue::fake();
+
+    [$user, $team, $congregation] = notifyReadyTeam();
+    $assignment = notifiableAssignment($team, $congregation);
+    $assignment->forceFill(['type' => TalkAssignmentType::Outgoing])->save();
+
+    $this->actingAs($user)
+        ->post(route('public-talks.schedule.notify', ['current_team' => $team->slug, 'assignment' => $assignment->id]))
+        ->assertRedirect();
+
+    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 1);
+});
+
+test('an invalid kind is rejected without queueing', function () {
+    Queue::fake();
+
+    [$user, $team, $congregation] = notifyReadyTeam();
+    $assignment = notifiableAssignment($team, $congregation);
+
+    $this->actingAs($user)
+        ->post(route('public-talks.schedule.notify', ['current_team' => $team->slug, 'assignment' => $assignment->id]), ['kind' => 'nonsense'])
+        ->assertRedirect();
+
+    Queue::assertNothingPushed();
+    expect($assignment->notifications()->count())->toBe(0);
+});
+
 test('notify is blocked when the team cannot send via the WhatsApp API', function () {
     Queue::fake();
 
@@ -128,18 +171,19 @@ test('notify returns 404 for an assignment of another team', function () {
     Queue::assertNothingPushed();
 });
 
-test('notify returns 404 for a non-home assignment', function () {
+test('an incoming assignment can be notified (visitor speaker)', function () {
     Queue::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     $assignment = notifiableAssignment($team, $congregation);
-    $assignment->forceFill(['type' => TalkAssignmentType::Outgoing])->save();
+    $assignment->forceFill(['type' => TalkAssignmentType::Incoming])->save();
 
     $this->actingAs($user)
         ->post(route('public-talks.schedule.notify', ['current_team' => $team->slug, 'assignment' => $assignment->id]))
-        ->assertNotFound();
+        ->assertRedirect();
 
-    Queue::assertNothingPushed();
+    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 1);
+    expect($assignment->notifications()->count())->toBe(1);
 });
 
 test('a member without the notify permission is forbidden', function () {

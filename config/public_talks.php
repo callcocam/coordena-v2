@@ -8,15 +8,17 @@ return [
     |--------------------------------------------------------------------------
     |
     | Antecedências (em dias) usadas pelo `public-talks:send-speaker-reminders`:
-    | `speaker_days_before` é o D-N do lembrete ao orador do discurso `home`;
+    | `speaker_days_before` é o primeiro lembrete ao orador (qualquer direção);
+    | `speaker_second_days_before` é o repique a quem ainda não confirmou;
     | `pending_days_before` é o D-N do alerta de discursos ainda não
-    | confirmados enviado ao coordenador responsável.
+    | confirmados enviado ao coordenador responsável (0 = no dia).
     |
     */
 
     'reminders' => [
         'speaker_days_before' => env('PUBLIC_TALKS_SPEAKER_REMINDER_DAYS', 3),
-        'pending_days_before' => env('PUBLIC_TALKS_PENDING_ALERT_DAYS', 1),
+        'speaker_second_days_before' => env('PUBLIC_TALKS_SPEAKER_SECOND_REMINDER_DAYS', 1),
+        'pending_days_before' => env('PUBLIC_TALKS_PENDING_ALERT_DAYS', 0),
     ],
 
     /*

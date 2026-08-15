@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicTalks\StoreExchangeSendRequest;
 use App\Jobs\SendExchangeInvite;
 use App\Models\Congregation;
+use App\Models\CongregationIntro;
 use App\Models\ExchangeInvite;
 use App\Models\ExchangeInviteSend;
 use App\Models\TalkAssignment;
@@ -17,6 +18,7 @@ use App\Services\PublicTalks\ExchangeRoundRobin;
 use App\Services\PublicTalks\InviteComposer;
 use App\Services\PublicTalks\ScheduleHorizon;
 use App\Support\Phone;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -50,6 +52,8 @@ class ExchangeController extends Controller
         $month = $this->resolveMonth($request);
         $invite = $this->manager->forMonth($team, $month, $request->user());
 
+        $pendingIntro = $this->roundRobin->pendingIntroFor($invite);
+        $introStatuses = $this->latestIntroStatuses($team, $pendingIntro);
         $candidates = $this->roundRobin->candidatesFor($invite);
         $suggestion = $candidates->first();
         $selected = $this->selectedCongregation($request, $candidates->pluck('id')->all()) ?? $suggestion;
@@ -76,11 +80,13 @@ class ExchangeController extends Controller
                     'has_whatsapp' => Phone::normalize($congregation->contact_phone) !== null,
                     'last_invited_at' => $lastInvitedAt[$congregation->id] ?? null,
                 ])->all(),
-            'pendingIntro' => $this->roundRobin->pendingIntroFor($invite)
+            'pendingIntro' => $pendingIntro
                 ->map(fn (Congregation $congregation): array => [
                     'id' => $congregation->id,
                     'name' => $congregation->name,
                     'city' => $congregation->city,
+                    'has_whatsapp' => Phone::normalize($congregation->contact_phone) !== null,
+                    'intro_status' => $introStatuses[$congregation->id] ?? null,
                 ])->all(),
             'selectedId' => $selected?->id,
             'composeText' => $selected !== null ? $this->composer->compose($invite, $selected) : null,
@@ -199,6 +205,31 @@ class ExchangeController extends Controller
                     'id' => $send->congregation->id,
                     'name' => $send->congregation->name,
                 ],
+            ])->all();
+    }
+
+    /**
+     * The status of the most recent introduction of each pending pair, keyed
+     * by congregation id — lets the page tell "never sent" apart from
+     * "waiting for the partner's answer".
+     *
+     * @param  Collection<int, Congregation>  $pendingIntro
+     * @return array<string, string>
+     */
+    protected function latestIntroStatuses(Team $team, Collection $pendingIntro): array
+    {
+        if ($pendingIntro->isEmpty()) {
+            return [];
+        }
+
+        return CongregationIntro::query()
+            ->where('team_id', $team->id)
+            ->whereIn('congregation_id', $pendingIntro->modelKeys())
+            ->latest()
+            ->get(['id', 'congregation_id', 'status'])
+            ->unique('congregation_id')
+            ->mapWithKeys(fn (CongregationIntro $intro): array => [
+                $intro->congregation_id => $intro->status->value,
             ])->all();
     }
 

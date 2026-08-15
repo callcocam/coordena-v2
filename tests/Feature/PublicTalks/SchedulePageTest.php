@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\DefaultCargo;
+use App\Enums\SpeakerNotificationKind;
+use App\Enums\SpeakerNotificationStatus;
 use App\Enums\TalkAssignmentStatus;
 use App\Models\Congregation;
 use App\Models\Coordinator;
@@ -202,6 +204,51 @@ test('clearing the speaker reopens the slot', function () {
     expect($assignment->speaker_id)->toBeNull()
         ->and($assignment->outline_id)->toBeNull()
         ->and($assignment->status)->toBe(TalkAssignmentStatus::Open);
+});
+
+test('the schedule exposes notification state and month progress', function () {
+    [$user, $team, $congregation] = scheduleReadyTeam();
+
+    $this->actingAs($user)
+        ->get(route('public-talks.schedule', ['current_team' => $team->slug]))
+        ->assertOk();
+
+    $assignment = TalkAssignment::query()
+        ->where('team_id', $team->id)
+        ->orderBy('date')
+        ->firstOrFail();
+
+    $speaker = Speaker::factory()->create([
+        'congregation_id' => $congregation->id,
+        'phone' => '44999990001',
+    ]);
+
+    $assignment->forceFill([
+        'speaker_id' => $speaker->id,
+        'outline_id' => PublicTalkOutline::factory()->create()->id,
+        'status' => TalkAssignmentStatus::Scheduled,
+    ])->save();
+
+    $assignment->notifications()->create([
+        'speaker_id' => $speaker->id,
+        'kind' => SpeakerNotificationKind::Assignment,
+        'status' => SpeakerNotificationStatus::Sent,
+        'sent_at' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('public-talks.schedule', ['current_team' => $team->slug]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('publicTalks/Schedule')
+            ->where('pendingCount', 1)
+            ->where('monthComplete', false)
+            ->where('weeks.0.speaker.id', $speaker->id)
+            ->where('weeks.0.speaker.phone', '5544999990001')
+            ->where('weeks.0.notifiable', false)
+            ->where('weeks.0.notification.kind', 'assignment')
+            ->where('weeks.0.notification.status', 'sent'),
+        );
 });
 
 test('an outgoing slot cannot be edited', function () {

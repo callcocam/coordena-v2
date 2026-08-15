@@ -114,3 +114,76 @@ test('orders candidates by least recently invited', function () {
 
     expect($candidates->pluck('id')->all())->toBe([$stale->id, $recent->id]);
 });
+
+test('pushes congregations with a live send on another month of the horizon out of the rotation', function () {
+    [$user, $team, $invite] = roundRobinInvite();
+
+    $free = Congregation::factory()->optedIn()->create([
+        'owner_user_id' => $user->id,
+        'name' => 'Congregação Alfa',
+        'contact_phone' => '51999990000',
+    ]);
+    $engagedElsewhere = Congregation::factory()->optedIn()->create([
+        'owner_user_id' => $user->id,
+        'name' => 'Congregação Beta',
+        'contact_phone' => '51999990001',
+    ]);
+
+    $otherInvite = ExchangeInvite::factory()->create([
+        'team_id' => $team->id,
+        'month' => Carbon::today()->startOfMonth()->toDateString(),
+    ]);
+    ExchangeInviteSend::factory()->create([
+        'invite_id' => $otherInvite->id,
+        'congregation_id' => $engagedElsewhere->id,
+        'status' => ExchangeInviteSendStatus::Sent,
+        'sent_at' => Carbon::now()->subDay(),
+    ]);
+
+    expect(app(ExchangeRoundRobin::class)->candidatesFor($invite)->pluck('id')->all())->toBe([$free->id]);
+});
+
+test('keeps the full rotation as a fallback when every candidate is engaged elsewhere', function () {
+    [$user, $team, $invite] = roundRobinInvite();
+
+    $onlyCandidate = Congregation::factory()->optedIn()->create([
+        'owner_user_id' => $user->id,
+        'contact_phone' => '51999990000',
+    ]);
+
+    $otherInvite = ExchangeInvite::factory()->create([
+        'team_id' => $team->id,
+        'month' => Carbon::today()->startOfMonth()->toDateString(),
+    ]);
+    ExchangeInviteSend::factory()->create([
+        'invite_id' => $otherInvite->id,
+        'congregation_id' => $onlyCandidate->id,
+        'status' => ExchangeInviteSendStatus::Sent,
+        'sent_at' => Carbon::now()->subDay(),
+    ]);
+
+    expect(app(ExchangeRoundRobin::class)->candidatesFor($invite)->pluck('id')->all())->toBe([$onlyCandidate->id])
+        ->and(app(ExchangeRoundRobin::class)->nextFor($invite)?->id)->toBe($onlyCandidate->id);
+});
+
+test('declined sends outside the horizon do not block the rotation', function () {
+    [$user, $team, $invite] = roundRobinInvite();
+
+    $partner = Congregation::factory()->optedIn()->create([
+        'owner_user_id' => $user->id,
+        'contact_phone' => '51999990000',
+    ]);
+
+    $pastInvite = ExchangeInvite::factory()->create([
+        'team_id' => $team->id,
+        'month' => Carbon::today()->subMonths(2)->startOfMonth()->toDateString(),
+    ]);
+    ExchangeInviteSend::factory()->create([
+        'invite_id' => $pastInvite->id,
+        'congregation_id' => $partner->id,
+        'status' => ExchangeInviteSendStatus::Sent,
+        'sent_at' => Carbon::now()->subMonths(2),
+    ]);
+
+    expect(app(ExchangeRoundRobin::class)->candidatesFor($invite)->pluck('id')->all())->toBe([$partner->id]);
+});

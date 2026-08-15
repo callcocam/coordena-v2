@@ -88,7 +88,7 @@ class SendSpeakerAssignmentNotification implements ShouldQueue
         try {
             $result = WhatsApp::for($assignment->team)->sendTemplate(
                 $phone,
-                TemplateMessage::make($kind->templateKey(), $message->params($assignment, $kind)),
+                TemplateMessage::make($message->templateKey($assignment, $kind), $message->params($assignment, $kind)),
             );
         } catch (CloudApiException $exception) {
             if ($exception->isTerminal()) {

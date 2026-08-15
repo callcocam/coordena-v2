@@ -18,6 +18,7 @@ import { schedule } from '@/routes/public-talks';
 import { show as congregationShow } from '@/routes/acervo/congregations';
 import { index as exchangeIndex } from '@/routes/public-talks/exchange';
 import { show as showSend, store as storeSend } from '@/routes/public-talks/exchange/sends';
+import { store as introStore } from '@/routes/acervo/congregations/intro';
 
 type Congregation = {
     id: string;
@@ -43,7 +44,13 @@ type Props = {
     openWeeks: { id: string; date: string }[];
     suggestionId: string | null;
     candidates: Congregation[];
-    pendingIntro: { id: string; name: string; city: string | null }[];
+    pendingIntro: {
+        id: string;
+        name: string;
+        city: string | null;
+        has_whatsapp: boolean;
+        intro_status: string | null;
+    }[];
     selectedId: string | null;
     composeText: string | null;
     sends: SendItem[];
@@ -65,6 +72,23 @@ const teamSlug = computed(() => page.props.currentTeam?.slug ?? '');
 
 const processing = ref(false);
 const copied = ref(false);
+const sendingIntroId = ref<string | null>(null);
+
+const introWaiting = (status: string | null): boolean => status === 'pending' || status === 'sent';
+
+const sendIntro = (congregationId: string): void => {
+    sendingIntroId.value = congregationId;
+    router.post(
+        introStore([teamSlug.value, congregationId]).url,
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                sendingIntroId.value = null;
+            },
+        },
+    );
+};
 const channel = ref<'manual' | 'whatsapp'>('manual');
 
 const selectedCongregation = computed(
@@ -249,19 +273,47 @@ const sendStatusVariant = (status: string): 'default' | 'destructive' | 'seconda
                         </p>
                     </div>
                     <ul class="max-h-64 overflow-y-auto overscroll-contain">
-                        <li v-for="pending in props.pendingIntro" :key="pending.id">
+                        <li
+                            v-for="pending in props.pendingIntro"
+                            :key="pending.id"
+                            class="flex flex-wrap items-center gap-3 border-b p-4 last:border-b-0"
+                            :data-test="`pending-intro-${pending.id}`"
+                        >
                             <Link
                                 :href="congregationShow([teamSlug, pending.id]).url"
-                                class="flex w-full items-center gap-3 border-b p-4 transition-colors last:border-b-0 hover:bg-accent"
-                                :data-test="`pending-intro-${pending.id}`"
+                                class="min-w-0 flex-1 transition-colors hover:text-accent-foreground"
                             >
-                                <div class="min-w-0 flex-1">
-                                    <span class="block truncate font-medium">{{ pending.name }}</span>
-                                    <span v-if="pending.city" class="text-xs text-muted-foreground">
-                                        {{ pending.city }}
-                                    </span>
-                                </div>
+                                <span class="block truncate font-medium">{{ pending.name }}</span>
+                                <span v-if="pending.city" class="text-xs text-muted-foreground">
+                                    {{ pending.city }}
+                                </span>
                             </Link>
+                            <Badge
+                                v-if="introWaiting(pending.intro_status)"
+                                variant="secondary"
+                                :data-test="`pending-intro-waiting-${pending.id}`"
+                            >
+                                {{ t('app.public_talks.exchange.pending_intro_waiting') }}
+                            </Badge>
+                            <Badge
+                                v-else-if="!pending.has_whatsapp"
+                                variant="outline"
+                                :data-test="`pending-intro-no-whatsapp-${pending.id}`"
+                            >
+                                {{ t('app.public_talks.exchange.no_whatsapp') }}
+                            </Badge>
+                            <Button
+                                v-else
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                :disabled="sendingIntroId !== null"
+                                :data-test="`pending-intro-send-${pending.id}`"
+                                @click="sendIntro(pending.id)"
+                            >
+                                <Send class="size-4" />
+                                {{ t('app.public_talks.exchange.pending_intro_send') }}
+                            </Button>
                         </li>
                     </ul>
                 </section>
