@@ -7,14 +7,15 @@ use App\Jobs\SendExchangeInviteNudge;
 use App\Models\ExchangeInviteSend;
 use App\Services\PublicTalks\CoordinatorAlert;
 use App\Services\PublicTalks\ExchangeRoundRobin;
+use App\Services\PublicTalks\PublicTalkSettings;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 /**
  * Reengate único dos convites de troca `sent` sem resposta há mais de
- * `public_talks.nudge_after_days` dias, e expiração dos que passaram de
- * `public_talks.expire_after_days`. Marca `nudged_at` já na despachada, então
+ * `exchange_nudge_days` dias, e expiração dos que passaram de
+ * `exchange_expire_days` (prazos por time via PublicTalkSettings). Marca `nudged_at` já na despachada, então
  * cada send recebe no máximo um reengate mesmo se o comando rodar de novo
  * antes de a fila processar; a expiração usa a própria mudança de status como
  * guarda de idempotência. O envio à próxima congregação continua manual — o
@@ -27,6 +28,7 @@ class NudgePendingInviteSends extends Command
     public function __construct(
         public ExchangeRoundRobin $roundRobin,
         public CoordinatorAlert $coordinatorAlert,
+        public PublicTalkSettings $settings,
     ) {
         parent::__construct();
     }
@@ -49,16 +51,17 @@ class NudgePendingInviteSends extends Command
      */
     protected function nudge(bool $dryRun): void
     {
-        $threshold = now()->subDays((int) config('public_talks.exchange.nudge_after_days'));
-        $expireThreshold = now()->subDays((int) config('public_talks.exchange.expire_after_days'));
-
         $sends = ExchangeInviteSend::query()
             ->where('status', ExchangeInviteSendStatus::Sent)
             ->whereNull('nudged_at')
-            ->where('created_at', '<=', $threshold)
-            ->where('created_at', '>', $expireThreshold)
             ->with(['congregation', 'invite.team'])
-            ->get();
+            ->get()
+            ->filter(function (ExchangeInviteSend $send): bool {
+                $teamSettings = $this->settings->for($send->invite->team);
+
+                return $send->created_at <= now()->subDays($teamSettings->get('exchange_nudge_days'))
+                    && $send->created_at > now()->subDays($teamSettings->get('exchange_expire_days'));
+            });
 
         foreach ($sends->values() as $index => $send) {
             /** @var ExchangeInviteSend $send */
@@ -82,13 +85,12 @@ class NudgePendingInviteSends extends Command
      */
     protected function expire(bool $dryRun): void
     {
-        $threshold = now()->subDays((int) config('public_talks.exchange.expire_after_days'));
-
         $sends = ExchangeInviteSend::query()
             ->where('status', ExchangeInviteSendStatus::Sent)
-            ->where('created_at', '<=', $threshold)
             ->with(['congregation', 'invite.team'])
-            ->get();
+            ->get()
+            ->filter(fn (ExchangeInviteSend $send): bool => $send->created_at
+                <= now()->subDays($this->settings->for($send->invite->team)->get('exchange_expire_days')));
 
         foreach ($sends as $send) {
             /** @var ExchangeInviteSend $send */

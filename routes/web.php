@@ -10,6 +10,8 @@ use App\Http\Controllers\PublicTalks\ExchangePortalController;
 use App\Http\Controllers\PublicTalks\ExchangeSendController;
 use App\Http\Controllers\PublicTalks\IntroPortalController;
 use App\Http\Controllers\PublicTalks\ScheduleController;
+use App\Http\Controllers\PublicTalks\ScheduleNotificationController;
+use App\Http\Controllers\PublicTalks\SettingsController as PublicTalkSettingsController;
 use App\Http\Controllers\PublicTalks\SetupController;
 use App\Http\Controllers\PublicTalks\SpeakerController;
 use App\Http\Controllers\Teams\TeamInvitationController;
@@ -34,8 +36,11 @@ Route::prefix('{current_team}')
 
         Route::get('discursos', [ScheduleController::class, 'index'])->name('public-talks.schedule');
         Route::put('discursos/semanas/{assignment}', [ScheduleController::class, 'update'])->name('public-talks.schedule.update');
-        Route::post('discursos/semanas/{assignment}/notificar', [ScheduleController::class, 'notify'])->name('public-talks.schedule.notify');
-        Route::post('discursos/semanas/troca/{week_start}/notificar', [ScheduleController::class, 'notifyExchange'])->name('public-talks.schedule.notify-exchange');
+        Route::post('discursos/semanas/{assignment}/notificar', [ScheduleNotificationController::class, 'notify'])->name('public-talks.schedule.notify');
+        Route::post('discursos/semanas/troca/{week_start}/notificar', [ScheduleNotificationController::class, 'notifyExchange'])->name('public-talks.schedule.notify-exchange');
+
+        Route::get('discursos/configuracoes', [PublicTalkSettingsController::class, 'show'])->name('public-talks.settings.show');
+        Route::put('discursos/configuracoes', [PublicTalkSettingsController::class, 'update'])->name('public-talks.settings.update');
 
         Route::post('discursos/setup/congregacao', [SetupController::class, 'storeCongregation'])->name('public-talks.setup.congregation');
         Route::post('discursos/setup/coordenador', [SetupController::class, 'storeCoordinator'])->name('public-talks.setup.coordinator');

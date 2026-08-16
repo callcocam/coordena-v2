@@ -6,6 +6,7 @@ import {
     CalendarDays,
     MessageCircle,
     Phone,
+    Settings,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
@@ -49,6 +50,7 @@ import {
     notify as notifySlot,
     update as updateSlot,
 } from '@/routes/public-talks/schedule';
+import { show as settingsShow } from '@/routes/public-talks/settings';
 import type {
     HomeCongregation,
     OutlineOption,
@@ -320,6 +322,10 @@ const goToExchange = () => {
     router.get(exchangeIndex(teamSlug.value).url, { month: props.month });
 };
 
+const goToSettings = () => {
+    router.get(settingsShow(teamSlug.value).url);
+};
+
 /* Exchange-week notify: one button sends to both speakers. */
 const confirmGroup = ref<WeekGroup | null>(null);
 
@@ -433,6 +439,16 @@ const sendNotifyExchange = () => {
                     </SelectItem>
                 </SelectContent>
             </Select>
+
+            <Button
+                variant="outline"
+                size="icon"
+                data-test="open-settings"
+                :aria-label="t('app.public_talks.settings.link')"
+                @click="goToSettings"
+            >
+                <Settings class="size-4" />
+            </Button>
         </template>
 
         <div
@@ -734,11 +750,22 @@ const sendNotifyExchange = () => {
                         >
                             {{ t('app.public_talks.schedule.view_week') }}
                         </Button>
+                        <span
+                            v-if="exchangeNotifiable(group).length === 0"
+                            class="text-xs text-muted-foreground"
+                            data-test="card-notify-unavailable"
+                        >
+                            {{
+                                t(
+                                    'app.public_talks.schedule.notify_exchange_unavailable',
+                                )
+                            }}
+                        </span>
                         <Button
-                            v-if="exchangeNotifiable(group).length > 0"
                             variant="secondary"
                             size="sm"
                             data-test="card-notify"
+                            :disabled="exchangeNotifiable(group).length === 0"
                             @click="requestNotifyExchange(group)"
                         >
                             <MessageCircle class="size-4" />

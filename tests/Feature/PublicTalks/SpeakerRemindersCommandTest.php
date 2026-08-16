@@ -15,6 +15,16 @@ use App\Services\PublicTalks\CoordinatorAlert;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Queue;
 
+/*
+ * Congela o relógio numa sexta-feira: com D-1 caindo no sábado e D-3 na
+ * segunda seguinte, os lembretes ficam em semanas diferentes e os cenários
+ * com dois assignments do mesmo time não estouram a unique team_id+week_start
+ * (rodar num domingo colocava D-1 e D-3 na mesma semana).
+ */
+beforeEach(function () {
+    Carbon::setTestNow(Carbon::parse('next friday')->setTime(8, 0));
+});
+
 function reminderTeam(): Team
 {
     $team = Team::factory()->create([

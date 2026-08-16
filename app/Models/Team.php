@@ -199,6 +199,7 @@ class Team extends Model
         return [
             'is_personal' => 'boolean',
             'whatsapp_api_enabled' => 'boolean',
+            'public_talk_settings' => 'array',
         ];
     }
 

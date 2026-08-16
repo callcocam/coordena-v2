@@ -154,6 +154,19 @@ assimétrico) e confirma. Detalhes e decisões completas nos próprios planos:
   página de ajuda pública `/ajuda/discursos-publicos` (estrutura por área, pois o Coordena
   terá outras atividades). Executar em chat separado.
 
+## Melhoria 10 — Configurações do módulo por time (concluída em 2026-08-16)
+
+- `melhoria-10-configuracoes-do-modulo.md` — tela "Configurações" dos discursos (como no
+  v1): overrides por time dos prazos de lembrete ao orador, alerta de pendências ao
+  coordenador e reengate/expiração das trocas, com fallback para
+  `config/public_talks.php`; serviço `PublicTalkSettings` por time consumido pelos
+  comandos agendados; novo `SettingsController` e extração de `notify`/`notifyExchange`
+  do `ScheduleController` para `ScheduleNotificationController`; botão "Enviar / lembrar"
+  desabilitado com o motivo quando ninguém está apto. Executada: coluna jsonb
+  `teams.public_talk_settings`, tela `publicTalks/Settings.vue` (rota
+  `public-talks.settings.*`, link na programação) e comandos lendo os prazos por time via
+  `PublicTalkSettings`.
+
 ## Melhoria 6 — Apresentação inline + rodízio por mês (planejada em 2026-08-14)
 
 - `melhoria-6-apresentacao-inline-e-rodizio-por-mes.md` — botão "Enviar apresentação" em cada

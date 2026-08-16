@@ -10,6 +10,7 @@ use App\Models\TalkAssignment;
 use App\Models\Team;
 use App\Services\PublicTalks\ConfiguredTeams;
 use App\Services\PublicTalks\CoordinatorAlert;
+use App\Services\PublicTalks\PublicTalkSettings;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -35,18 +36,20 @@ class SendSpeakerReminders extends Command
     /**
      * Execute the console command.
      */
-    public function handle(ConfiguredTeams $teams, CoordinatorAlert $alert): int
+    public function handle(ConfiguredTeams $teams, CoordinatorAlert $alert, PublicTalkSettings $settings): int
     {
         $dryRun = (bool) $this->option('dry-run');
 
-        $reminderOffsets = array_unique([
-            (int) config('public_talks.reminders.speaker_days_before'),
-            (int) config('public_talks.reminders.speaker_second_days_before'),
-        ]);
-        $pendingDate = Carbon::today()->addDays((int) config('public_talks.reminders.pending_days_before'));
-
         foreach ($teams->query()->cursor() as $team) {
             /** @var Team $team */
+            $teamSettings = $settings->for($team);
+
+            $reminderOffsets = array_unique([
+                $teamSettings->get('speaker_reminder_days'),
+                $teamSettings->get('speaker_second_reminder_days'),
+            ]);
+            $pendingDate = Carbon::today()->addDays($teamSettings->get('pending_alert_days'));
+
             foreach ($reminderOffsets as $daysBefore) {
                 $this->remindSpeakers($team, Carbon::today()->addDays($daysBefore), $dryRun);
             }
