@@ -45,6 +45,7 @@ import { dashboard } from '@/routes';
 import { schedule } from '@/routes/public-talks';
 import { index as exchangeIndex } from '@/routes/public-talks/exchange';
 import {
+    notifyExchange as notifyExchangeWeek,
     notify as notifySlot,
     update as updateSlot,
 } from '@/routes/public-talks/schedule';
@@ -318,6 +319,63 @@ const sendNotify = () => {
 const goToExchange = () => {
     router.get(exchangeIndex(teamSlug.value).url, { month: props.month });
 };
+
+/* Exchange-week notify: one button sends to both speakers. */
+const confirmGroup = ref<WeekGroup | null>(null);
+
+const exchangeNotifiable = (group: WeekGroup): ScheduleWeek[] =>
+    [group.incoming, group.outgoing].filter(
+        (week): week is ScheduleWeek => week !== null && week.notifiable,
+    );
+
+/**
+ * Aggregated label of the exchange notify button: nobody contacted yet →
+ * assignment; everybody already contacted → reminder; mixed → both.
+ */
+const exchangeNotifyKind = (
+    group: WeekGroup,
+): 'assignment' | 'reminder' | 'both' => {
+    const kinds = exchangeNotifiable(group).map(notifyKind);
+
+    if (kinds.every((kind) => kind === 'assignment')) {
+        return 'assignment';
+    }
+
+    return kinds.every((kind) => kind === 'reminder') ? 'reminder' : 'both';
+};
+
+const requestNotifyExchange = (group: WeekGroup) => {
+    const eligible = exchangeNotifiable(group);
+
+    if (eligible.length === 1) {
+        confirmWeek.value = eligible[0];
+
+        return;
+    }
+
+    confirmGroup.value = group;
+};
+
+const sendNotifyExchange = () => {
+    const group = confirmGroup.value;
+
+    if (!group) {
+        return;
+    }
+
+    router.post(
+        notifyExchangeWeek([teamSlug.value, group.week_start]).url,
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => (processing.value = true),
+            onFinish: () => (processing.value = false),
+            onSuccess: () => {
+                confirmGroup.value = null;
+            },
+        },
+    );
+};
 </script>
 
 <template>
@@ -536,7 +594,7 @@ const goToExchange = () => {
                         </span>
                     </div>
 
-                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div class="mt-3 space-y-2">
                         <div
                             v-for="direction in (
                                 [
@@ -545,24 +603,32 @@ const goToExchange = () => {
                                 ] as const
                             ).filter(([, week]) => week !== null)"
                             :key="direction[0]"
-                            class="rounded-md border p-3"
+                            :role="
+                                isOpenable(direction[1]!) ? 'button' : undefined
+                            "
+                            :tabindex="
+                                isOpenable(direction[1]!) ? 0 : undefined
+                            "
+                            class="w-full rounded-md border p-3 text-left transition-colors"
                             :class="
-                                direction[0] === 'incoming'
-                                    ? 'border-emerald-500/40 bg-emerald-500/5'
-                                    : 'border-sky-500/40 bg-sky-500/5'
+                                isOpenable(direction[1]!)
+                                    ? 'cursor-pointer hover:bg-accent'
+                                    : ''
                             "
                             :data-test="`exchange-${direction[0]}`"
+                            @click="openWeek(direction[1]!)"
+                            @keydown.enter="openWeek(direction[1]!)"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-2">
                                         <ArrowDownLeft
                                             v-if="direction[0] === 'incoming'"
-                                            class="size-4 shrink-0 text-emerald-600"
+                                            class="size-4 shrink-0 text-brand"
                                         />
                                         <ArrowUpRight
                                             v-else
-                                            class="size-4 shrink-0 text-sky-600"
+                                            class="size-4 shrink-0 text-muted-foreground"
                                         />
                                         <span class="text-sm font-semibold">
                                             {{
@@ -654,40 +720,34 @@ const goToExchange = () => {
                                         }}
                                     </div>
                                 </div>
-
-                                <div
-                                    class="flex shrink-0 flex-col items-end gap-2"
-                                >
-                                    <Button
-                                        v-if="direction[1]!.notifiable"
-                                        variant="secondary"
-                                        size="sm"
-                                        data-test="card-notify"
-                                        @click="requestNotify(direction[1]!)"
-                                    >
-                                        <MessageCircle class="size-4" />
-                                        {{
-                                            t(
-                                                `app.public_talks.schedule.notify_${notifyKind(direction[1]!)}`,
-                                            )
-                                        }}
-                                    </Button>
-                                    <Button
-                                        v-if="direction[0] === 'outgoing'"
-                                        variant="outline"
-                                        size="sm"
-                                        data-test="week-action"
-                                        @click="openWeek(direction[1]!)"
-                                    >
-                                        {{
-                                            t(
-                                                'app.public_talks.schedule.view_week',
-                                            )
-                                        }}
-                                    </Button>
-                                </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="mt-3 flex items-center justify-end gap-2">
+                        <Button
+                            v-if="group.outgoing"
+                            variant="outline"
+                            size="sm"
+                            data-test="week-action"
+                            @click="openWeek(group.outgoing!)"
+                        >
+                            {{ t('app.public_talks.schedule.view_week') }}
+                        </Button>
+                        <Button
+                            v-if="exchangeNotifiable(group).length > 0"
+                            variant="secondary"
+                            size="sm"
+                            data-test="card-notify"
+                            @click="requestNotifyExchange(group)"
+                        >
+                            <MessageCircle class="size-4" />
+                            {{
+                                t(
+                                    `app.public_talks.schedule.notify_${exchangeNotifyKind(group)}`,
+                                )
+                            }}
+                        </Button>
                     </div>
                 </div>
             </template>
@@ -874,15 +934,33 @@ const goToExchange = () => {
     </Sheet>
 
     <AlertDialog
-        :open="confirmWeek !== null"
-        @update:open="(open) => !open && (confirmWeek = null)"
+        :open="confirmWeek !== null || confirmGroup !== null"
+        @update:open="
+            (open) => {
+                if (!open) {
+                    confirmWeek = null;
+                    confirmGroup = null;
+                }
+            }
+        "
     >
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>
                     {{ t('app.public_talks.schedule.notify_confirm_title') }}
                 </AlertDialogTitle>
-                <AlertDialogDescription v-if="confirmWeek">
+                <AlertDialogDescription v-if="confirmGroup">
+                    {{
+                        t('app.public_talks.schedule.notify_confirm_both', {
+                            incoming:
+                                confirmGroup.incoming?.speaker?.name ?? '',
+                            outgoing:
+                                confirmGroup.outgoing?.speaker?.name ?? '',
+                            date: shortDateLabel(confirmGroup.week_start),
+                        })
+                    }}
+                </AlertDialogDescription>
+                <AlertDialogDescription v-else-if="confirmWeek">
                     {{
                         t(
                             `app.public_talks.schedule.notify_confirm_${notifyKind(confirmWeek)}`,
@@ -901,7 +979,7 @@ const goToExchange = () => {
                 <AlertDialogAction
                     :disabled="processing"
                     data-test="confirm-notify"
-                    @click="sendNotify"
+                    @click="confirmGroup ? sendNotifyExchange() : sendNotify()"
                 >
                     {{ t('app.public_talks.schedule.notify_confirm_send') }}
                 </AlertDialogAction>

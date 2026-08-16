@@ -142,6 +142,78 @@ class ScheduleController extends Controller
     }
 
     /**
+     * Queue the WhatsApp notification for both speakers of an exchange week
+     * (visitor coming in + our speaker going out) in a single action. The
+     * kind is resolved per assignment: first contact sends the assignment,
+     * any follow-up sends the confirmation reminder.
+     */
+    public function notifyExchange(Request $request, string $current_team, string $week_start): RedirectResponse
+    {
+        $team = $request->user()->currentTeam;
+
+        abort_unless(preg_match('/^\d{4}-\d{2}-\d{2}$/', $week_start) === 1, 404);
+
+        $assignments = TalkAssignment::query()
+            ->where('team_id', $team->id)
+            ->whereDate('week_start', $week_start)
+            ->whereIn('type', [TalkAssignmentType::Incoming, TalkAssignmentType::Outgoing])
+            ->with(['speaker', 'latestNotification'])
+            ->orderBy('date')
+            ->get()
+            ->each(fn (TalkAssignment $assignment) => $assignment->setRelation('team', $team));
+
+        abort_if($assignments->isEmpty(), 404);
+
+        $assignments->each(fn (TalkAssignment $assignment) => Gate::authorize('notify', $assignment));
+
+        if (! $team->canSendWhatsappApi()) {
+            return $this->notifyError(__('O WhatsApp do time não está pronto para envios pela API.'));
+        }
+
+        [$eligible, $skipped] = $assignments->partition(
+            fn (TalkAssignment $assignment): bool => $assignment->speaker_id !== null
+                && $assignment->outline_id !== null
+                && Phone::normalize($assignment->speaker?->phone) !== null,
+        );
+
+        if ($eligible->isEmpty()) {
+            return $this->notifyError(__('Nenhum orador da troca está pronto para receber a mensagem (orador, esboço e telefone).'));
+        }
+
+        foreach ($eligible as $assignment) {
+            $kind = $assignment->latestNotification === null
+                ? SpeakerNotificationKind::Assignment
+                : SpeakerNotificationKind::Reminder;
+
+            SendSpeakerAssignmentNotification::queueFor($assignment, $kind, $request->user());
+        }
+
+        $sentNames = $eligible
+            ->map(fn (TalkAssignment $assignment): string => (string) $assignment->speaker?->name)
+            ->filter()
+            ->implode(' e ');
+
+        if ($skipped->isEmpty()) {
+            $message = $eligible->count() > 1
+                ? __('Mensagem enviada aos dois oradores da troca.')
+                : __('Mensagem enviada para :name.', ['name' => $sentNames]);
+        } else {
+            $skippedNames = $skipped
+                ->map(fn (TalkAssignment $assignment): string => $assignment->speaker?->name ?? __('orador não definido'))
+                ->implode(' e ');
+
+            $message = __('Mensagem enviada para :sent. Sem envio para :skipped (falta orador, esboço ou telefone).', [
+                'sent' => $sentNames,
+                'skipped' => $skippedNames,
+            ]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
+
+        return back();
+    }
+
+    /**
      * Flash an error toast and return to the schedule.
      */
     protected function notifyError(string $message): RedirectResponse

@@ -203,3 +203,181 @@ test('a member without the notify permission is forbidden', function () {
 
     Queue::assertNothingPushed();
 });
+
+/**
+ * @return array{0: TalkAssignment, 1: TalkAssignment}
+ */
+function exchangeWeekPair(Team $team, Congregation $congregation, string $date = '2026-09-12'): array
+{
+    $make = fn (string $type): TalkAssignment => TalkAssignment::factory()->create([
+        'team_id' => $team->id,
+        'date' => $date,
+        'type' => $type === 'incoming' ? TalkAssignmentType::Incoming : TalkAssignmentType::Outgoing,
+        'speaker_id' => Speaker::factory()->create(['congregation_id' => $congregation->id])->id,
+        'outline_id' => PublicTalkOutline::factory()->create()->id,
+    ]);
+
+    return [$make('incoming'), $make('outgoing')];
+}
+
+function notifyExchangeRoute(Team $team, TalkAssignment $assignment): string
+{
+    return route('public-talks.schedule.notify-exchange', [
+        'current_team' => $team->slug,
+        'week_start' => $assignment->week_start->toDateString(),
+    ]);
+}
+
+test('notify exchange queues one notification per speaker of the week', function () {
+    Queue::fake();
+
+    [$user, $team, $congregation] = notifyReadyTeam();
+    [$incoming, $outgoing] = exchangeWeekPair($team, $congregation);
+
+    $response = $this->actingAs($user)->from(route('public-talks.schedule', ['current_team' => $team->slug]))
+        ->post(notifyExchangeRoute($team, $incoming));
+
+    $response->assertRedirect(route('public-talks.schedule', ['current_team' => $team->slug]));
+
+    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 2);
+
+    foreach ([$incoming, $outgoing] as $assignment) {
+        $notification = $assignment->notifications()->first();
+        expect($notification)->not->toBeNull()
+            ->and($notification->kind)->toBe(SpeakerNotificationKind::Assignment)
+            ->and($notification->status)->toBe(SpeakerNotificationStatus::Pending)
+            ->and($notification->speaker_id)->toBe($assignment->speaker_id)
+            ->and($notification->sent_by_id)->toBe($user->id);
+    }
+});
+
+test('notify exchange resolves the kind per speaker (mixed assignment and reminder)', function () {
+    Queue::fake();
+
+    [$user, $team, $congregation] = notifyReadyTeam();
+    [$incoming, $outgoing] = exchangeWeekPair($team, $congregation);
+
+    $incoming->notifications()->create([
+        'speaker_id' => $incoming->speaker_id,
+        'kind' => SpeakerNotificationKind::Assignment,
+        'status' => SpeakerNotificationStatus::Sent,
+    ]);
+
+    $this->actingAs($user)
+        ->post(notifyExchangeRoute($team, $incoming))
+        ->assertRedirect();
+
+    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 2);
+
+    expect($incoming->notifications()->latest('id')->first()->kind)->toBe(SpeakerNotificationKind::Reminder)
+        ->and($outgoing->notifications()->first()->kind)->toBe(SpeakerNotificationKind::Assignment);
+});
+
+test('notify exchange skips the speaker without a valid phone', function () {
+    Queue::fake();
+
+    [$user, $team, $congregation] = notifyReadyTeam();
+    [$incoming, $outgoing] = exchangeWeekPair($team, $congregation);
+    $outgoing->speaker->forceFill(['phone' => null])->save();
+
+    $this->actingAs($user)
+        ->post(notifyExchangeRoute($team, $incoming))
+        ->assertRedirect();
+
+    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 1);
+
+    expect($incoming->notifications()->count())->toBe(1)
+        ->and($outgoing->notifications()->count())->toBe(0);
+});
+
+test('notify exchange is blocked when no speaker is eligible', function () {
+    Queue::fake();
+
+    [$user, $team, $congregation] = notifyReadyTeam();
+    [$incoming, $outgoing] = exchangeWeekPair($team, $congregation);
+    $incoming->speaker->forceFill(['phone' => null])->save();
+    $outgoing->forceFill(['speaker_id' => null, 'outline_id' => null])->save();
+
+    $this->actingAs($user)
+        ->post(notifyExchangeRoute($team, $incoming))
+        ->assertRedirect();
+
+    Queue::assertNothingPushed();
+    expect($incoming->notifications()->count())->toBe(0);
+});
+
+test('notify exchange is blocked when the team cannot send via the WhatsApp API', function () {
+    Queue::fake();
+
+    [$user, $team, $congregation] = notifyReadyTeam();
+    [$incoming] = exchangeWeekPair($team, $congregation);
+    $team->forceFill(['whatsapp_api_enabled' => false])->save();
+
+    $this->actingAs($user)
+        ->post(notifyExchangeRoute($team, $incoming))
+        ->assertRedirect();
+
+    Queue::assertNothingPushed();
+});
+
+test('notify exchange returns 404 for a week without exchange assignments', function () {
+    Queue::fake();
+
+    [$user, $team] = notifyReadyTeam();
+
+    $this->actingAs($user)
+        ->post(route('public-talks.schedule.notify-exchange', [
+            'current_team' => $team->slug,
+            'week_start' => '2026-09-07',
+        ]))
+        ->assertNotFound();
+
+    Queue::assertNothingPushed();
+});
+
+test('notify exchange returns 404 for a malformed week start', function () {
+    Queue::fake();
+
+    [$user, $team] = notifyReadyTeam();
+
+    $this->actingAs($user)
+        ->post(route('public-talks.schedule.notify-exchange', [
+            'current_team' => $team->slug,
+            'week_start' => 'not-a-date',
+        ]))
+        ->assertNotFound();
+
+    Queue::assertNothingPushed();
+});
+
+test('notify exchange does not reach assignments of another team', function () {
+    Queue::fake();
+
+    [$user, $team] = notifyReadyTeam();
+    [, $otherTeam, $otherCongregation] = notifyReadyTeam();
+    [$incoming] = exchangeWeekPair($otherTeam, $otherCongregation);
+
+    $this->actingAs($user)
+        ->post(notifyExchangeRoute($team, $incoming))
+        ->assertNotFound();
+
+    Queue::assertNothingPushed();
+});
+
+test('a member without the notify permission cannot notify the exchange week', function () {
+    Queue::fake();
+
+    [, $team, $congregation] = notifyReadyTeam();
+    [$incoming] = exchangeWeekPair($team, $congregation);
+
+    $member = User::factory()->create();
+    $team->members()->attach($member);
+    $member->assignCargo($team, DefaultCargo::Secretario->value);
+    $member->switchTeam($team);
+
+    $this->actingAs($member->fresh())
+        ->post(notifyExchangeRoute($team, $incoming))
+        ->assertForbidden();
+
+    Queue::assertNothingPushed();
+});

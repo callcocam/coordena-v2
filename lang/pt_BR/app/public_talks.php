@@ -47,6 +47,8 @@ return [
         'notify_confirm_title' => 'Enviar mensagem no WhatsApp?',
         'notify_confirm_assignment' => 'O orador :speaker vai receber a designação de :date no WhatsApp.',
         'notify_confirm_reminder' => 'O orador :speaker vai receber um lembrete pedindo para confirmar (ou remarcar) o discurso de :date.',
+        'notify_both' => 'Enviar / lembrar',
+        'notify_confirm_both' => 'Os oradores :incoming e :outgoing vão receber a mensagem da troca de :date no WhatsApp.',
         'notify_confirm_cancel' => 'Cancelar',
         'notify_confirm_send' => 'Enviar',
         'notification' => [
