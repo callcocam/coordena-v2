@@ -283,7 +283,12 @@ const canNotify = computed(
     () => activeWeek.value !== null && activeWeek.value.notifiable,
 );
 
-/* WhatsApp notify confirmation */
+/*
+ * WhatsApp notify confirmation. `confirmOpen` controls the dialog on its own:
+ * AlertDialogAction auto-closes the dialog on click, so the payload refs must
+ * survive the close event to still be readable inside sendNotify*().
+ */
+const confirmOpen = ref(false);
 const confirmWeek = ref<ScheduleWeek | null>(null);
 
 /**
@@ -294,6 +299,8 @@ const notifyKind = (week: ScheduleWeek): 'assignment' | 'reminder' =>
 
 const requestNotify = (week: ScheduleWeek) => {
     confirmWeek.value = week;
+    confirmGroup.value = null;
+    confirmOpen.value = true;
 };
 
 const sendNotify = () => {
@@ -311,6 +318,7 @@ const sendNotify = () => {
             onStart: () => (processing.value = true),
             onFinish: () => (processing.value = false),
             onSuccess: () => {
+                confirmOpen.value = false;
                 confirmWeek.value = null;
                 sheetOpen.value = false;
             },
@@ -354,12 +362,14 @@ const requestNotifyExchange = (group: WeekGroup) => {
     const eligible = exchangeNotifiable(group);
 
     if (eligible.length === 1) {
-        confirmWeek.value = eligible[0];
+        requestNotify(eligible[0]);
 
         return;
     }
 
     confirmGroup.value = group;
+    confirmWeek.value = null;
+    confirmOpen.value = true;
 };
 
 const sendNotifyExchange = () => {
@@ -377,6 +387,7 @@ const sendNotifyExchange = () => {
             onStart: () => (processing.value = true),
             onFinish: () => (processing.value = false),
             onSuccess: () => {
+                confirmOpen.value = false;
                 confirmGroup.value = null;
             },
         },
@@ -961,15 +972,8 @@ const sendNotifyExchange = () => {
     </Sheet>
 
     <AlertDialog
-        :open="confirmWeek !== null || confirmGroup !== null"
-        @update:open="
-            (open) => {
-                if (!open) {
-                    confirmWeek = null;
-                    confirmGroup = null;
-                }
-            }
-        "
+        :open="confirmOpen"
+        @update:open="(open) => (confirmOpen = open)"
     >
         <AlertDialogContent>
             <AlertDialogHeader>

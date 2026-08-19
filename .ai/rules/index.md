@@ -6,6 +6,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | --- | --- |
 | app/** | .ai/rules/app.md |
 | app/Console/Commands/**, app/Console/Commands/SendSpeakerReminders.php | .ai/rules/commands.md |
+| app/Http/Controllers/PublicTalks/** | .ai/rules/controllers-public-talks.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | tests/Feature/PublicTalks/** | .ai/rules/feature-public-talks.md |
 | app/Services/PublicTalks/Inbound/** | .ai/rules/inbound.md |

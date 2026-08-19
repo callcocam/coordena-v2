@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
+use Throwable;
 
 /**
  * As ações de notificação WhatsApp da programação (designação/lembrete ao
@@ -21,7 +22,7 @@ use Inertia\Inertia;
 class ScheduleNotificationController extends Controller
 {
     /**
-     * Queue the WhatsApp notification (assignment or reminder) for the slot's
+     * Send the WhatsApp notification (assignment or reminder) to the slot's
      * speaker. All directions are allowed — the template copy varies by type
      * (local, quem sai, orador visitante), resolved per assignment by
      * TalkAssignmentMessage. Re-sending is allowed: each call creates a fresh
@@ -53,7 +54,13 @@ class ScheduleNotificationController extends Controller
             return $this->notifyError(__('O WhatsApp do time não está pronto para envios pela API.'));
         }
 
-        SendSpeakerAssignmentNotification::queueFor($assignment, $kind, $request->user());
+        try {
+            SendSpeakerAssignmentNotification::sendNowFor($assignment, $kind, $request->user());
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return $this->notifyError(__('Falha no envio pelo WhatsApp: :reason', ['reason' => $exception->getMessage()]));
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Notificação enviada ao orador.')]);
 
@@ -61,7 +68,7 @@ class ScheduleNotificationController extends Controller
     }
 
     /**
-     * Queue the WhatsApp notification for both speakers of an exchange week
+     * Send the WhatsApp notification immediately to both speakers of an exchange week
      * (visitor coming in + our speaker going out) in a single action. The
      * kind is resolved per assignment: first contact sends the assignment,
      * any follow-up sends the confirmation reminder.
@@ -99,21 +106,36 @@ class ScheduleNotificationController extends Controller
             return $this->notifyError(__('Nenhum orador da troca está pronto para receber a mensagem (orador, esboço e telefone).'));
         }
 
+        $failed = collect();
+
         foreach ($eligible as $assignment) {
             $kind = $assignment->latestNotification === null
                 ? SpeakerNotificationKind::Assignment
                 : SpeakerNotificationKind::Reminder;
 
-            SendSpeakerAssignmentNotification::queueFor($assignment, $kind, $request->user());
+            try {
+                SendSpeakerAssignmentNotification::sendNowFor($assignment, $kind, $request->user());
+            } catch (Throwable $exception) {
+                report($exception);
+                $failed->push($assignment);
+            }
         }
 
-        $sentNames = $eligible
+        $sent = $eligible->reject(fn (TalkAssignment $assignment): bool => $failed->contains($assignment));
+
+        if ($sent->isEmpty()) {
+            return $this->notifyError(__('O envio pelo WhatsApp falhou para os oradores da troca.'));
+        }
+
+        $sentNames = $sent
             ->map(fn (TalkAssignment $assignment): string => (string) $assignment->speaker?->name)
             ->filter()
             ->implode(' e ');
 
+        $skipped = $skipped->merge($failed);
+
         if ($skipped->isEmpty()) {
-            $message = $eligible->count() > 1
+            $message = $sent->count() > 1
                 ? __('Mensagem enviada aos dois oradores da troca.')
                 : __('Mensagem enviada para :name.', ['name' => $sentNames]);
         } else {
@@ -121,7 +143,7 @@ class ScheduleNotificationController extends Controller
                 ->map(fn (TalkAssignment $assignment): string => $assignment->speaker?->name ?? __('orador não definido'))
                 ->implode(' e ');
 
-            $message = __('Mensagem enviada para :sent. Sem envio para :skipped (falta orador, esboço ou telefone).', [
+            $message = __('Mensagem enviada para :sent. Sem envio para :skipped (falta orador, esboço ou telefone, ou o envio falhou).', [
                 'sent' => $sentNames,
                 'skipped' => $skippedNames,
             ]);

@@ -101,7 +101,14 @@ class PublicTalkDemoSeeder extends Seeder
             ], [
                 'role' => $i % 3 === 0 ? SpeakerRole::MinisterialServant : SpeakerRole::Elder,
                 'is_active' => true,
+                'phone' => $this->demoPhone($index, $i),
             ]);
+
+            // Backfill para bases semeadas antes do telefone existir no seeder:
+            // sem telefone os envios de WhatsApp do demo falham.
+            if ($speaker->phone === null) {
+                $speaker->update(['phone' => $this->demoPhone($index, $i)]);
+            }
 
             if ($outlineIds !== []) {
                 $speaker->outlines()->syncWithoutDetaching(
@@ -109,6 +116,14 @@ class PublicTalkDemoSeeder extends Seeder
                 );
             }
         }
+    }
+
+    /**
+     * Deterministic fake WhatsApp phone for a demo speaker (DDI 55 + DDD 51).
+     */
+    protected function demoPhone(int $congregationIndex, int $speakerIndex): string
+    {
+        return sprintf('5551998%02d%03d0', $congregationIndex % 100, $speakerIndex % 1000);
     }
 
     /**

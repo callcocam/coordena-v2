@@ -13,7 +13,7 @@ use App\Models\Team;
 use App\Models\TeamWhatsappConnection;
 use App\Models\User;
 use App\Models\WhatsappTermsAcceptance;
-use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Bus;
 
 /**
  * @return array{0: User, 1: Team, 2: Congregation}
@@ -46,7 +46,7 @@ function notifiableAssignment(Team $team, Congregation $congregation): TalkAssig
 }
 
 test('coordinator can queue a speaker notification', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     $assignment = notifiableAssignment($team, $congregation);
@@ -56,7 +56,7 @@ test('coordinator can queue a speaker notification', function () {
 
     $response->assertRedirect(route('public-talks.schedule', ['current_team' => $team->slug]));
 
-    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 1);
+    Bus::assertDispatchedSync(SendSpeakerAssignmentNotification::class, 1);
 
     $notification = $assignment->notifications()->first();
     expect($notification)->not->toBeNull()
@@ -67,7 +67,7 @@ test('coordinator can queue a speaker notification', function () {
 });
 
 test('notify is blocked when speaker or outline is missing', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     $assignment = TalkAssignment::factory()->create([
@@ -80,12 +80,12 @@ test('notify is blocked when speaker or outline is missing', function () {
         ->post(route('public-talks.schedule.notify', ['current_team' => $team->slug, 'assignment' => $assignment->id]))
         ->assertRedirect();
 
-    Queue::assertNothingPushed();
+    Bus::assertNothingDispatched();
     expect($assignment->notifications()->count())->toBe(0);
 });
 
 test('notify is blocked when the speaker has no valid phone', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     $assignment = notifiableAssignment($team, $congregation);
@@ -95,12 +95,12 @@ test('notify is blocked when the speaker has no valid phone', function () {
         ->post(route('public-talks.schedule.notify', ['current_team' => $team->slug, 'assignment' => $assignment->id]))
         ->assertRedirect();
 
-    Queue::assertNothingPushed();
+    Bus::assertNothingDispatched();
     expect($assignment->notifications()->count())->toBe(0);
 });
 
 test('notify accepts the reminder kind', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     $assignment = notifiableAssignment($team, $congregation);
@@ -109,13 +109,13 @@ test('notify accepts the reminder kind', function () {
         ->post(route('public-talks.schedule.notify', ['current_team' => $team->slug, 'assignment' => $assignment->id]), ['kind' => 'reminder'])
         ->assertRedirect();
 
-    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 1);
+    Bus::assertDispatchedSync(SendSpeakerAssignmentNotification::class, 1);
 
     expect($assignment->notifications()->first()->kind)->toBe(SpeakerNotificationKind::Reminder);
 });
 
 test('an outgoing assignment can be notified', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     $assignment = notifiableAssignment($team, $congregation);
@@ -125,11 +125,11 @@ test('an outgoing assignment can be notified', function () {
         ->post(route('public-talks.schedule.notify', ['current_team' => $team->slug, 'assignment' => $assignment->id]))
         ->assertRedirect();
 
-    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 1);
+    Bus::assertDispatchedSync(SendSpeakerAssignmentNotification::class, 1);
 });
 
 test('an invalid kind is rejected without queueing', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     $assignment = notifiableAssignment($team, $congregation);
@@ -138,12 +138,12 @@ test('an invalid kind is rejected without queueing', function () {
         ->post(route('public-talks.schedule.notify', ['current_team' => $team->slug, 'assignment' => $assignment->id]), ['kind' => 'nonsense'])
         ->assertRedirect();
 
-    Queue::assertNothingPushed();
+    Bus::assertNothingDispatched();
     expect($assignment->notifications()->count())->toBe(0);
 });
 
 test('notify is blocked when the team cannot send via the WhatsApp API', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     $assignment = notifiableAssignment($team, $congregation);
@@ -153,12 +153,12 @@ test('notify is blocked when the team cannot send via the WhatsApp API', functio
         ->post(route('public-talks.schedule.notify', ['current_team' => $team->slug, 'assignment' => $assignment->id]))
         ->assertRedirect();
 
-    Queue::assertNothingPushed();
+    Bus::assertNothingDispatched();
     expect($assignment->notifications()->count())->toBe(0);
 });
 
 test('notify returns 404 for an assignment of another team', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team] = notifyReadyTeam();
     [, $otherTeam, $otherCongregation] = notifyReadyTeam();
@@ -168,11 +168,11 @@ test('notify returns 404 for an assignment of another team', function () {
         ->post(route('public-talks.schedule.notify', ['current_team' => $team->slug, 'assignment' => $assignment->id]))
         ->assertNotFound();
 
-    Queue::assertNothingPushed();
+    Bus::assertNothingDispatched();
 });
 
 test('an incoming assignment can be notified (visitor speaker)', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     $assignment = notifiableAssignment($team, $congregation);
@@ -182,12 +182,12 @@ test('an incoming assignment can be notified (visitor speaker)', function () {
         ->post(route('public-talks.schedule.notify', ['current_team' => $team->slug, 'assignment' => $assignment->id]))
         ->assertRedirect();
 
-    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 1);
+    Bus::assertDispatchedSync(SendSpeakerAssignmentNotification::class, 1);
     expect($assignment->notifications()->count())->toBe(1);
 });
 
 test('a member without the notify permission is forbidden', function () {
-    Queue::fake();
+    Bus::fake();
 
     [, $team, $congregation] = notifyReadyTeam();
     $assignment = notifiableAssignment($team, $congregation);
@@ -201,7 +201,7 @@ test('a member without the notify permission is forbidden', function () {
         ->post(route('public-talks.schedule.notify', ['current_team' => $team->slug, 'assignment' => $assignment->id]))
         ->assertForbidden();
 
-    Queue::assertNothingPushed();
+    Bus::assertNothingDispatched();
 });
 
 /**
@@ -229,7 +229,7 @@ function notifyExchangeRoute(Team $team, TalkAssignment $assignment): string
 }
 
 test('notify exchange queues one notification per speaker of the week', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     [$incoming, $outgoing] = exchangeWeekPair($team, $congregation);
@@ -239,7 +239,7 @@ test('notify exchange queues one notification per speaker of the week', function
 
     $response->assertRedirect(route('public-talks.schedule', ['current_team' => $team->slug]));
 
-    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 2);
+    Bus::assertDispatchedSync(SendSpeakerAssignmentNotification::class, 2);
 
     foreach ([$incoming, $outgoing] as $assignment) {
         $notification = $assignment->notifications()->first();
@@ -252,7 +252,7 @@ test('notify exchange queues one notification per speaker of the week', function
 });
 
 test('notify exchange resolves the kind per speaker (mixed assignment and reminder)', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     [$incoming, $outgoing] = exchangeWeekPair($team, $congregation);
@@ -267,14 +267,14 @@ test('notify exchange resolves the kind per speaker (mixed assignment and remind
         ->post(notifyExchangeRoute($team, $incoming))
         ->assertRedirect();
 
-    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 2);
+    Bus::assertDispatchedSync(SendSpeakerAssignmentNotification::class, 2);
 
     expect($incoming->notifications()->latest('id')->first()->kind)->toBe(SpeakerNotificationKind::Reminder)
         ->and($outgoing->notifications()->first()->kind)->toBe(SpeakerNotificationKind::Assignment);
 });
 
 test('notify exchange skips the speaker without a valid phone', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     [$incoming, $outgoing] = exchangeWeekPair($team, $congregation);
@@ -284,14 +284,14 @@ test('notify exchange skips the speaker without a valid phone', function () {
         ->post(notifyExchangeRoute($team, $incoming))
         ->assertRedirect();
 
-    Queue::assertPushed(SendSpeakerAssignmentNotification::class, 1);
+    Bus::assertDispatchedSync(SendSpeakerAssignmentNotification::class, 1);
 
     expect($incoming->notifications()->count())->toBe(1)
         ->and($outgoing->notifications()->count())->toBe(0);
 });
 
 test('notify exchange is blocked when no speaker is eligible', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     [$incoming, $outgoing] = exchangeWeekPair($team, $congregation);
@@ -302,12 +302,12 @@ test('notify exchange is blocked when no speaker is eligible', function () {
         ->post(notifyExchangeRoute($team, $incoming))
         ->assertRedirect();
 
-    Queue::assertNothingPushed();
+    Bus::assertNothingDispatched();
     expect($incoming->notifications()->count())->toBe(0);
 });
 
 test('notify exchange is blocked when the team cannot send via the WhatsApp API', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team, $congregation] = notifyReadyTeam();
     [$incoming] = exchangeWeekPair($team, $congregation);
@@ -317,11 +317,11 @@ test('notify exchange is blocked when the team cannot send via the WhatsApp API'
         ->post(notifyExchangeRoute($team, $incoming))
         ->assertRedirect();
 
-    Queue::assertNothingPushed();
+    Bus::assertNothingDispatched();
 });
 
 test('notify exchange returns 404 for a week without exchange assignments', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team] = notifyReadyTeam();
 
@@ -332,11 +332,11 @@ test('notify exchange returns 404 for a week without exchange assignments', func
         ]))
         ->assertNotFound();
 
-    Queue::assertNothingPushed();
+    Bus::assertNothingDispatched();
 });
 
 test('notify exchange returns 404 for a malformed week start', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team] = notifyReadyTeam();
 
@@ -347,11 +347,11 @@ test('notify exchange returns 404 for a malformed week start', function () {
         ]))
         ->assertNotFound();
 
-    Queue::assertNothingPushed();
+    Bus::assertNothingDispatched();
 });
 
 test('notify exchange does not reach assignments of another team', function () {
-    Queue::fake();
+    Bus::fake();
 
     [$user, $team] = notifyReadyTeam();
     [, $otherTeam, $otherCongregation] = notifyReadyTeam();
@@ -361,11 +361,11 @@ test('notify exchange does not reach assignments of another team', function () {
         ->post(notifyExchangeRoute($team, $incoming))
         ->assertNotFound();
 
-    Queue::assertNothingPushed();
+    Bus::assertNothingDispatched();
 });
 
 test('a member without the notify permission cannot notify the exchange week', function () {
-    Queue::fake();
+    Bus::fake();
 
     [, $team, $congregation] = notifyReadyTeam();
     [$incoming] = exchangeWeekPair($team, $congregation);
@@ -379,5 +379,5 @@ test('a member without the notify permission cannot notify the exchange week', f
         ->post(notifyExchangeRoute($team, $incoming))
         ->assertForbidden();
 
-    Queue::assertNothingPushed();
+    Bus::assertNothingDispatched();
 });

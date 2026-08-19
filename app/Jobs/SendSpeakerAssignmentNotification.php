@@ -66,6 +66,31 @@ class SendSpeakerAssignmentNotification implements ShouldQueue
     }
 
     /**
+     * Create the Pending notification row and send it synchronously, in the
+     * current request. Used by the manual buttons on the schedule screen so
+     * the message goes out immediately, without depending on the queue
+     * worker. A send failure bubbles up to the caller (the row is marked
+     * `failed` by {@see failed()}).
+     */
+    public static function sendNowFor(
+        TalkAssignment $assignment,
+        SpeakerNotificationKind $kind,
+        ?User $sentBy = null,
+    ): TalkAssignmentNotification {
+        /** @var TalkAssignmentNotification $notification */
+        $notification = $assignment->notifications()->create([
+            'speaker_id' => $assignment->speaker_id,
+            'kind' => $kind,
+            'status' => SpeakerNotificationStatus::Pending,
+            'sent_by_id' => $sentBy?->id,
+        ]);
+
+        self::dispatchSync($notification);
+
+        return $notification;
+    }
+
+    /**
      * Execute the job.
      */
     public function handle(TalkAssignmentMessage $message): void

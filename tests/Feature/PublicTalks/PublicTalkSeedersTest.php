@@ -59,8 +59,25 @@ test('demo seeder is idempotent and builds the demo team', function () {
 
     $speakers = Speaker::query()->count();
 
+    expect(Speaker::query()->whereNull('phone')->count())->toBe(0);
+
     $this->seed(PublicTalkDemoSeeder::class);
 
     expect(Speaker::query()->count())->toBe($speakers)
         ->and(Team::query()->where('name', 'Arranjo de Oradores (Demo)')->count())->toBe(1);
+});
+
+test('demo seeder backfills phones for speakers seeded without one', function () {
+    $owner = User::factory()->create();
+
+    $this->seed(PublicTalkOutlineSeeder::class);
+    Congregation::factory()->count(2)->create(['owner_user_id' => $owner->id]);
+
+    $this->seed(PublicTalkDemoSeeder::class);
+
+    Speaker::query()->update(['phone' => null]);
+
+    $this->seed(PublicTalkDemoSeeder::class);
+
+    expect(Speaker::query()->whereNull('phone')->count())->toBe(0);
 });
