@@ -68,7 +68,7 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
 
       - name: Rollback deploy
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.APP_HOST }}
           username: ${{ secrets.APP_USER }}
@@ -127,7 +127,7 @@ jobs:
             docker compose -p "coordena-v2-${APP_SLUG}" ps
 
       - name: Health check (inside app container)
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.APP_HOST }}
           username: ${{ secrets.APP_USER }}

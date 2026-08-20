@@ -38,7 +38,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Resolve deploy context
         id: context
@@ -115,7 +115,7 @@ jobs:
           strip_components: 2
 
       - name: Deploy app
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.5
         # Passa o GITHUB_TOKEN efêmero para a VPS para autenticar no GHCR
         # antes do pull (imagem privada). Sem isso o pull falha com
         # "error from registry: unauthorized".
@@ -241,7 +241,7 @@ jobs:
             docker compose -p "coordena-v2-${APP_SLUG}" ps
 
       - name: Health check (inside app container)
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.APP_HOST }}
           username: ${{ secrets.APP_USER }}
